@@ -50,16 +50,62 @@ export function startWorker() {
 
             // Pull Docker image
             await pullImage(game.image);
-            job.updateProgress(50);
+            job.updateProgress(30);
 
-            // Allocate ports
-            const portMappings = await Promise.all(
-              game.ports.map(async (p) => ({
-                container: p.container,
-                host: await allocateHostPort(p.container),
-                proto: p.proto
-              }))
-            );
+            // Handle custom servers differently
+            let portMappings;
+            let binds = [`${dataPath}:${game.volumePaths.data}`];
+            let envVars = game.envDefaults
+              ? Object.entries(game.envDefaults).map(([k, v]) => `${k}=${v}`)
+              : [];
+
+            if (game.key === "custom") {
+              // Load custom script for this server
+              const customScript = await prisma.customScript.findUnique({
+                where: { serverId: server.id }
+              });
+
+              if (!customScript) {
+                throw new Error("Custom script not found for server");
+              }
+
+              // Write script to startup directory
+              const scriptPath = path.join(dataPath, "server_init.sh");
+              await fs.writeFile(scriptPath, customScript.content, { mode: 0o755 });
+
+              // Mount script into container
+              binds.push(`${scriptPath}:/startup/server_init.sh:ro`);
+
+              // Use ports from custom script
+              const portSpecs = customScript.portSpecs as any[];
+              portMappings = await Promise.all(
+                portSpecs.map(async (p) => ({
+                  container: p.container,
+                  host: await allocateHostPort(p.container),
+                  proto: p.proto
+                }))
+              );
+
+              // Add custom environment variables
+              const customEnv = customScript.envVars as Record<string, string>;
+              envVars = [
+                ...envVars,
+                ...Object.entries(customEnv).map(([k, v]) => `${k}=${v}`)
+              ];
+
+              console.log(`[CUSTOM] Created custom server with script hash: ${customScript.scriptHash}`);
+            } else {
+              // Standard game server
+              portMappings = await Promise.all(
+                game.ports.map(async (p) => ({
+                  container: p.container,
+                  host: await allocateHostPort(p.container),
+                  proto: p.proto
+                }))
+              );
+            }
+
+            job.updateProgress(60);
 
             // Create container
             const containerConfig: Docker.ContainerCreateOptions = {
@@ -67,10 +113,10 @@ export function startWorker() {
               name: `su_${server.id}`,
               Hostname: `spinup-${server.name}`,
               ExposedPorts: Object.fromEntries(
-                game.ports.map(p => [`${p.container}/${p.proto}`, {}])
+                portMappings.map(p => [`${p.container}/${p.proto}`, {}])
               ),
               HostConfig: {
-                Binds: [`${dataPath}:${game.volumePaths.data}`],
+                Binds: binds,
                 PortBindings: Object.fromEntries(
                   portMappings.map(p => [
                     `${p.container}/${p.proto}`,
@@ -79,11 +125,10 @@ export function startWorker() {
                 ),
                 RestartPolicy: { Name: "unless-stopped" },
                 Memory: 2 * 1024 * 1024 * 1024, // 2GB default
-                CpuShares: 1024
+                CpuShares: 1024,
+                SecurityOpt: ["no-new-privileges:true"] // Extra security for custom servers
               },
-              Env: game.envDefaults
-                ? Object.entries(game.envDefaults).map(([k, v]) => `${k}=${v}`)
-                : []
+              Env: envVars
             };
 
             const container = await docker.createContainer(containerConfig);

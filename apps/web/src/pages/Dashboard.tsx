@@ -60,6 +60,7 @@ const gameIcons: Record<string, string> = {
   'dst': '🌙',
   'starbound': '🚀',
   'vrising': '🧛',
+  'custom': '🔧',
 };
 
 type FilterStatus = 'all' | ServerStatus;

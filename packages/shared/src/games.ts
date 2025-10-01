@@ -223,6 +223,14 @@ export const GAMES: GameImage[] = [
       GAME_SETTINGS_PRESET: "StandardPvP"
     },
     volumePaths: { data: "/data" }
+  },
+  {
+    key: "custom",
+    name: "Custom Server (Advanced)",
+    image: "spinup/generic-server:latest",
+    ports: [], // Dynamically configured
+    envDefaults: {},
+    volumePaths: { data: "/data" }
   }
 ];
 
