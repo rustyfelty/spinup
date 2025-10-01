@@ -1,0 +1,255 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  api-tests:
+    name: API Unit Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: spinup_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @spinup/api prisma generate
+
+      - name: Setup test database
+        run: pnpm --filter @spinup/api prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/spinup_test
+
+      - name: Run API tests
+        run: pnpm test:api
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/spinup_test
+          REDIS_URL: redis://localhost:6379
+          API_JWT_SECRET: test-jwt-secret
+          SERVICE_TOKEN: test-service-token
+          NODE_ENV: test
+
+      - name: Generate coverage report
+        run: pnpm test:api:coverage
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/spinup_test
+          REDIS_URL: redis://localhost:6379
+          API_JWT_SECRET: test-jwt-secret
+          SERVICE_TOKEN: test-service-token
+          NODE_ENV: test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./apps/api/coverage/coverage-final.json
+          flags: api
+          name: api-coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: api-coverage
+          path: apps/api/coverage/
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: api-tests  # Run only if API tests pass
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: spinup_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @spinup/api prisma generate
+
+      - name: Setup test database
+        run: pnpm --filter @spinup/api prisma db push
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/spinup_test
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build applications
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/spinup_test
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/spinup_test
+          REDIS_URL: redis://localhost:6379
+          API_JWT_SECRET: test-jwt-secret
+          SERVICE_TOKEN: test-service-token
+          API_PORT: 8080
+          WEB_ORIGIN: http://localhost:5173
+          VITE_API_URL: http://localhost:8080
+          NODE_ENV: test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test videos
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: test-videos
+          path: test-results/
+          retention-days: 7
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [api-tests, e2e-tests]
+    if: always()
+
+    steps:
+      - name: Download API coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: api-coverage
+          path: coverage/
+
+      - name: Download Playwright report
+        uses: actions/download-artifact@v3
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+      - name: Generate summary
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### API Tests" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.api-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### E2E Tests" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ needs.e2e-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed reports in the artifacts section above." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const apiStatus = '${{ needs.api-tests.result }}';
+            const e2eStatus = '${{ needs.e2e-tests.result }}';
+
+            const statusEmoji = (status) => {
+              switch(status) {
+                case 'success': return '✅';
+                case 'failure': return '❌';
+                case 'skipped': return '⏭️';
+                default: return '⚠️';
+              }
+            };
+
+            const body = `## Test Results
+
+            ${statusEmoji(apiStatus)} **API Tests**: ${apiStatus}
+            ${statusEmoji(e2eStatus)} **E2E Tests**: ${e2eStatus}
+
+            ### Summary
+            - API Unit Tests: 80 tests
+            - E2E Tests: 32 tests
+            - Total: 112 tests
+
+            [View detailed results](${context.payload.pull_request.html_url}/checks)
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

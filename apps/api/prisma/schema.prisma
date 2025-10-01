@@ -1,0 +1,183 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  discordId    String   @unique
+  displayName  String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  audits       Audit[]
+  loginTokens  LoginToken[]
+}
+
+model Org {
+  id           String   @id @default(cuid())
+  discordGuild String   @unique
+  name         String
+  iconUrl      String?
+  defaultChan  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships  Membership[]
+  servers      Server[]
+  audits       Audit[]
+}
+
+model Membership {
+  id      String @id @default(cuid())
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId  String
+  org     Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId   String
+  role    Role   @default(OPERATOR)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, orgId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+model Server {
+  id         String   @id @default(cuid())
+  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId      String
+  name       String
+  gameKey    String
+  status     ServerStatus @default(STOPPED)
+  ports      Json     @default("[]")
+  containerId String?
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  configs    ConfigVersion[]
+  jobs       Job[]
+  backups    Backup[]
+
+  @@index([orgId])
+  @@index([status])
+}
+
+enum ServerStatus {
+  CREATING
+  RUNNING
+  STOPPED
+  ERROR
+  DELETING
+}
+
+model ConfigVersion {
+  id         String   @id @default(cuid())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId   String
+  schemaVer  String   @default("1.0")
+  values     Json
+  createdAt  DateTime @default(now())
+  createdBy  String
+
+  @@index([serverId])
+}
+
+model Job {
+  id         String   @id @default(cuid())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId   String
+  type       JobType
+  status     JobStatus @default(PENDING)
+  progress   Int       @default(0)
+  payload    Json      @default("{}")
+  logs       String    @default("")
+  error      String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([serverId])
+  @@index([status])
+}
+
+enum JobType {
+  CREATE
+  START
+  STOP
+  DELETE
+  RESTART
+  BACKUP
+  RESTORE
+  PULL
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model Backup {
+  id         String   @id @default(cuid())
+  server     Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId   String
+  location   String
+  sizeBytes  Int
+  createdAt  DateTime @default(now())
+  notes      String?
+
+  @@index([serverId])
+}
+
+model LoginToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([jti])
+  @@index([expiresAt])
+}
+
+model PairingCode {
+  code       String   @id
+  userId     String
+  orgId      String
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model Audit {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  orgId     String?
+  org       Org?     @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  action    String
+  target    String
+  meta      Json     @default("{}")
+  at        DateTime @default(now())
+
+  @@index([orgId])
+  @@index([actorId])
+}

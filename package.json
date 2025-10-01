@@ -1,0 +1,28 @@
+{
+  "name": "spinup",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm --filter @spinup/web dev",
+    "dev:api": "pnpm --filter @spinup/api dev",
+    "dev:bot": "pnpm --filter @spinup/bot dev",
+    "dev": "concurrently -k -n web,api \"pnpm dev:web\" \"pnpm dev:api\"",
+    "dev:with-bot": "concurrently -k -n web,api,bot \"pnpm dev:web\" \"pnpm dev:api\" \"pnpm dev:bot\"",
+    "build": "pnpm -r build",
+    "db:push": "pnpm --filter @spinup/api prisma db push",
+    "db:migrate": "pnpm --filter @spinup/api prisma migrate dev",
+    "db:studio": "pnpm --filter @spinup/api prisma studio",
+    "test": "pnpm test:api && pnpm test:e2e",
+    "test:api": "pnpm --filter @spinup/api test",
+    "test:api:watch": "pnpm --filter @spinup/api test:watch",
+    "test:api:coverage": "pnpm --filter @spinup/api test:coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "concurrently": "^9.0.0",
+    "playwright": "^1.55.1"
+  }
+}
