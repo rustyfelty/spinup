@@ -66,9 +66,10 @@ model Server {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  configs    ConfigVersion[]
-  jobs       Job[]
-  backups    Backup[]
+  configs       ConfigVersion[]
+  jobs          Job[]
+  backups       Backup[]
+  customScript  CustomScript?
 
   @@index([orgId])
   @@index([status])
@@ -180,4 +181,22 @@ model Audit {
 
   @@index([orgId])
   @@index([actorId])
+}
+
+model CustomScript {
+  id           String   @id @default(cuid())
+  server       Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId     String   @unique
+  scriptHash   String   // SHA-256 hash for integrity verification
+  scriptType   String   @default("bash") // bash, python, etc.
+  content      String   @db.Text
+  portSpecs    Json     @default("[]") // Dynamic port requirements
+  envVars      Json     @default("{}") // Environment variables
+  validated    Boolean  @default(false) // Has passed security validation
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([serverId])
+  @@index([scriptHash])
 }

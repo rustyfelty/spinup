@@ -1,0 +1,82 @@
+# SpinUp Generic Game Server Container (AMD64/x86_64)
+# Full version with SteamCMD, Wine, and 32-bit libraries
+# For production deployment on AMD64 servers
+
+FROM --platform=linux/amd64 ubuntu:22.04
+
+LABEL maintainer="SpinUp"
+LABEL description="Generic container for running game servers with custom scripts (AMD64)"
+LABEL version="1.0.0"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install base dependencies with 32-bit and Wine support
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    # Core utilities
+    ca-certificates \
+    curl \
+    wget \
+    unzip \
+    tar \
+    xz-utils \
+    bzip2 \
+    # Build tools
+    build-essential \
+    git \
+    # 32-bit libraries (for many game servers)
+    lib32gcc-s1 \
+    lib32stdc++6 \
+    libc6:i386 \
+    libstdc++6:i386 \
+    # Wine (for Windows-only servers)
+    wine64 \
+    wine32 \
+    # Networking
+    netcat-traditional \
+    iproute2 \
+    # Process management
+    procps \
+    # Text processing
+    jq \
+    # Python
+    python3 \
+    python3-pip \
+    # Clean up
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install SteamCMD
+RUN mkdir -p /opt/steamcmd && \
+    cd /opt/steamcmd && \
+    wget https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz && \
+    tar -xvzf steamcmd_linux.tar.gz && \
+    rm steamcmd_linux.tar.gz && \
+    # Run once to complete installation
+    /opt/steamcmd/steamcmd.sh +quit || true
+
+# Create non-root user for running servers
+RUN useradd -m -u 1000 -s /bin/bash gameserver && \
+    mkdir -p /data /startup && \
+    chown -R gameserver:gameserver /data /startup /opt/steamcmd
+
+# Set up environment
+ENV PATH="/opt/steamcmd:${PATH}"
+ENV WINEARCH=win64
+ENV WINEPREFIX=/home/gameserver/.wine
+
+# Switch to non-root user
+USER gameserver
+WORKDIR /data
+
+# Volume for game server data
+VOLUME ["/data"]
+
+# Entrypoint will execute the custom startup script
+COPY --chown=gameserver:gameserver entrypoint.sh /startup/entrypoint.sh
+USER root
+RUN chmod +x /startup/entrypoint.sh
+USER gameserver
+
+ENTRYPOINT ["/startup/entrypoint.sh"]
