@@ -63,6 +63,8 @@ model Server {
   ports      Json     @default("[]")
   containerId String?
   createdBy  String
+  memoryCap  Int      @default(2048)  // Memory limit in MB
+  cpuShares  Int      @default(2048)  // CPU shares (1024 = 1 core)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

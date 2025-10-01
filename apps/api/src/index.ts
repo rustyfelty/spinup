@@ -6,6 +6,7 @@ import rateLimit from "@fastify/rate-limit";
 import { serverRoutes } from "./routes/servers";
 import { ssoRoutes } from "./routes/sso";
 import { configRoutes } from "./routes/config";
+import { systemRoutes } from "./routes/system";
 import { startWorker } from "./workers/server.worker";
 
 const app = Fastify({
@@ -53,6 +54,7 @@ async function start() {
     await app.register(ssoRoutes, { prefix: "/api/sso" });
     await app.register(serverRoutes, { prefix: "/api/servers" });
     await app.register(configRoutes, { prefix: "/api/config" });
+    await app.register(systemRoutes, { prefix: "/api/system" });
 
     // Start job worker
     startWorker();

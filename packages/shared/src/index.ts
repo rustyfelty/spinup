@@ -1,5 +1,5 @@
 // Main entry point for shared package
 
-export * from './games';
-export * from './schemas';
-export * from './types';
+export * from './games.js';
+export * from './schemas.js';
+export * from './types.js';
