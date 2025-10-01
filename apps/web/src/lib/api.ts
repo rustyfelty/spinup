@@ -32,7 +32,13 @@ export const serversApi = {
     return data as Server
   },
 
-  async create(data: { orgId: string; name: string; gameKey: string }) {
+  async create(data: {
+    orgId: string;
+    name: string;
+    gameKey: string;
+    memoryCap?: number;
+    cpuShares?: number;
+  }) {
     const { data: result } = await api.post('/api/servers', data)
     return result as { id: string }
   },

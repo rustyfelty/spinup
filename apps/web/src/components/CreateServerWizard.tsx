@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { XCircle, CheckCircle, Activity, Zap, HardDrive } from 'lucide-react';
+import { XCircle, CheckCircle, Activity, Zap, HardDrive, Cpu, MemoryStick } from 'lucide-react';
 import { serversApi } from '../lib/api';
 import { GAMES, type GameImage } from '@spinup/shared';
 
@@ -17,6 +17,8 @@ interface FormData {
   region: string;
   autoStart: boolean;
   backups: boolean;
+  memoryCap: number;
+  cpuShares: number;
 }
 
 const presets = [
@@ -35,11 +37,20 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
     region: 'us-east',
     autoStart: true,
     backups: true,
+    memoryCap: 2048,
+    cpuShares: 2048,
   });
 
+  const selectedGame = GAMES.find((g: GameImage) => g.key === formData.game);
+
   const createServerMutation = useMutation({
-    mutationFn: (data: { orgId: string; name: string; gameKey: string }) =>
-      serversApi.create(data),
+    mutationFn: (data: {
+      orgId: string;
+      name: string;
+      gameKey: string;
+      memoryCap: number;
+      cpuShares: number;
+    }) => serversApi.create(data),
     onSuccess: () => {
       onSuccess();
     },
@@ -52,6 +63,8 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
       orgId,
       name: formData.name,
       gameKey: formData.game,
+      memoryCap: formData.memoryCap,
+      cpuShares: formData.cpuShares,
     });
   };
 
@@ -59,6 +72,18 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
     if (step === 1) return !!formData.game;
     if (step === 2) return !!formData.name;
     return true;
+  };
+
+  const setResourcePreset = (preset: 'minimum' | 'recommended' | 'maximum') => {
+    if (!selectedGame) return;
+    const resources = selectedGame.resources[preset];
+    if (resources) {
+      setFormData({
+        ...formData,
+        memoryCap: resources.memory,
+        cpuShares: resources.cpu,
+      });
+    }
   };
 
   // Game icon mapping
@@ -75,6 +100,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
     'cs2': '🔫',
     'satisfactory': '⚙️',
     '7dtd': '💀',
+    'custom': '🔧',
   };
 
   return (
@@ -85,7 +111,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Create New Server</h2>
-              <p className="text-sm text-gray-600 mt-1">Step {step} of 4</p>
+              <p className="text-sm text-gray-600 mt-1">Step {step} of 5</p>
             </div>
             <button
               onClick={onClose}
@@ -100,7 +126,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${(step / 4) * 100}%` }}
+                style={{ width: `${(step / 5) * 100}%` }}
               />
             </div>
           </div>
@@ -115,7 +141,12 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
                 {GAMES.map((game: GameImage) => (
                   <button
                     key={game.key}
-                    onClick={() => setFormData({ ...formData, game: game.key })}
+                    onClick={() => setFormData({
+                      ...formData,
+                      game: game.key,
+                      memoryCap: game.resources.recommended.memory,
+                      cpuShares: game.resources.recommended.cpu,
+                    })}
                     className={`p-4 rounded-2xl border-2 transition-all hover:scale-105 ${
                       formData.game === game.key
                         ? 'border-purple-500 bg-purple-50'
@@ -231,6 +262,138 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
           )}
 
           {step === 4 && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold mb-4">Resource Allocation</h3>
+
+              {/* Preset buttons */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Choose a preset
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setResourcePreset('minimum')}
+                    className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-300 transition-all text-left"
+                  >
+                    <div className="font-medium text-gray-900">Minimum</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {selectedGame?.resources.minimum.description}
+                    </div>
+                    <div className="text-xs text-purple-600 mt-2 font-medium">
+                      {selectedGame?.resources.minimum.memory}MB RAM, {selectedGame?.resources.minimum.cpu / 1024} cores
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setResourcePreset('recommended')}
+                    className="p-4 rounded-xl border-2 border-purple-500 bg-purple-50 transition-all text-left"
+                  >
+                    <div className="font-medium text-gray-900 flex items-center gap-2">
+                      Recommended
+                      <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Popular</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {selectedGame?.resources.recommended.description}
+                    </div>
+                    <div className="text-xs text-purple-600 mt-2 font-medium">
+                      {selectedGame?.resources.recommended.memory}MB RAM, {selectedGame?.resources.recommended.cpu / 1024} cores
+                    </div>
+                  </button>
+
+                  {selectedGame?.resources.maximum && (
+                    <button
+                      onClick={() => setResourcePreset('maximum')}
+                      className="p-4 rounded-xl border-2 border-gray-200 hover:border-purple-300 transition-all text-left"
+                    >
+                      <div className="font-medium text-gray-900">Maximum</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {selectedGame.resources.maximum.description}
+                      </div>
+                      <div className="text-xs text-purple-600 mt-2 font-medium">
+                        {selectedGame.resources.maximum.memory}MB RAM, {selectedGame.resources.maximum.cpu / 1024} cores
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Memory slider */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <MemoryStick className="w-4 h-4" />
+                    Memory (RAM)
+                  </label>
+                  <span className="text-sm font-semibold text-purple-600">
+                    {formData.memoryCap}MB ({(formData.memoryCap / 1024).toFixed(1)}GB)
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={selectedGame?.resources.minimum.memory || 512}
+                  max={selectedGame?.resources.maximum?.memory || 16384}
+                  step={512}
+                  value={formData.memoryCap}
+                  onChange={(e) => setFormData({ ...formData, memoryCap: parseInt(e.target.value) })}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>{selectedGame?.resources.minimum.memory}MB</span>
+                  <span>{selectedGame?.resources.maximum?.memory || 16384}MB</span>
+                </div>
+              </div>
+
+              {/* CPU slider */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Cpu className="w-4 h-4" />
+                    CPU Cores
+                  </label>
+                  <span className="text-sm font-semibold text-purple-600">
+                    {(formData.cpuShares / 1024).toFixed(1)} cores
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={selectedGame?.resources.minimum.cpu || 1024}
+                  max={selectedGame?.resources.maximum?.cpu || 8192}
+                  step={1024}
+                  value={formData.cpuShares}
+                  onChange={(e) => setFormData({ ...formData, cpuShares: parseInt(e.target.value) })}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>{(selectedGame?.resources.minimum.cpu || 1024) / 1024} cores</span>
+                  <span>{(selectedGame?.resources.maximum?.cpu || 8192) / 1024} cores</span>
+                </div>
+              </div>
+
+              {/* Performance estimate */}
+              {selectedGame?.scaling && (
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                  <div className="flex items-start space-x-3">
+                    <Activity className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-900">Estimated Capacity</p>
+                      <p className="text-blue-700 mt-1">
+                        With these resources, your server can support approximately{' '}
+                        <span className="font-semibold">
+                          {Math.min(
+                            Math.floor((formData.memoryCap / 1024) * selectedGame.scaling.playersPerGB),
+                            Math.floor((formData.cpuShares / 1024) * selectedGame.scaling.playersPerCore)
+                          )}
+                        </span>{' '}
+                        concurrent players
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 5 && (
             <div>
               <div className="text-center mb-6">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -271,6 +434,26 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
                   <span className="text-gray-600">Backups</span>
                   <span className="font-medium text-gray-900">
                     {formData.backups ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 flex items-center gap-2">
+                      <MemoryStick className="w-4 h-4" />
+                      Memory (RAM)
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      {formData.memoryCap}MB ({(formData.memoryCap / 1024).toFixed(1)}GB)
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <Cpu className="w-4 h-4" />
+                    CPU Cores
+                  </span>
+                  <span className="font-medium text-gray-900">
+                    {(formData.cpuShares / 1024).toFixed(1)} cores
                   </span>
                 </div>
               </div>
@@ -318,7 +501,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
             </button>
 
             <div className="flex items-center space-x-3">
-              {step === 4 ? (
+              {step === 5 ? (
                 <button
                   onClick={handleCreateServer}
                   disabled={createServerMutation.isPending}

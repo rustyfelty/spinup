@@ -124,8 +124,9 @@ export function startWorker() {
                   ])
                 ),
                 RestartPolicy: { Name: "unless-stopped" },
-                Memory: 2 * 1024 * 1024 * 1024, // 2GB default
-                CpuShares: 1024,
+                Memory: server.memoryCap * 1024 * 1024, // Convert MB to bytes
+                MemorySwap: server.memoryCap * 1024 * 1024, // Disable swap
+                CpuShares: server.cpuShares,
                 SecurityOpt: ["no-new-privileges:true"] // Extra security for custom servers
               },
               Env: envVars

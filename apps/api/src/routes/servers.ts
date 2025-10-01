@@ -8,6 +8,8 @@ interface CreateServerBody {
   orgId: string;
   name: string;
   gameKey: string;
+  memoryCap?: number;
+  cpuShares?: number;
 }
 
 interface ServerParams {
@@ -103,7 +105,7 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
    */
   fastify.post<{ Body: CreateServerBody }>("/", { preHandler: authorizeOrgAccess }, async (request, reply) => {
     try {
-      const { orgId, name, gameKey } = request.body;
+      const { orgId, name, gameKey, memoryCap, cpuShares } = request.body;
 
       // Validate required fields
       if (!orgId || !name || !gameKey) {
@@ -138,6 +140,10 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
       // For now using a placeholder
       const createdBy = "system";
 
+      // Use provided resources or default to recommended
+      const finalMemoryCap = memoryCap || game.resources.recommended.memory;
+      const finalCpuShares = cpuShares || game.resources.recommended.cpu;
+
       // Create server record with status: "CREATING"
       const server = await prisma.server.create({
         data: {
@@ -146,7 +152,9 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
           gameKey,
           status: "CREATING",
           ports: [],
-          createdBy
+          createdBy,
+          memoryCap: finalMemoryCap,
+          cpuShares: finalCpuShares
         }
       });
 
