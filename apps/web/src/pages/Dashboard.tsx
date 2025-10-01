@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -26,6 +26,7 @@ import type { Server, ServerStatus } from '@spinup/shared';
 import { GAMES, type GameImage } from '@spinup/shared';
 import CreateServerWizard from '../components/CreateServerWizard';
 import SystemHealthModal from '../components/SystemHealthModal';
+import CommandPalette from '../components/CommandPalette';
 
 // Status color mappings
 const statusColors: Record<ServerStatus, string> = {
@@ -73,6 +74,7 @@ type FilterStatus = 'all' | ServerStatus;
 export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHealthModal, setShowHealthModal] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -165,6 +167,18 @@ export default function Dashboard() {
     logoutMutation.mutate();
   };
 
+  // Keyboard shortcut for command palette (Cmd+K or Ctrl+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -236,7 +250,11 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <button
+                onClick={() => setShowCommandPalette(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Command Palette (⌘K)"
+              >
                 <Terminal className="w-5 h-5 text-gray-600" />
               </button>
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -488,6 +506,24 @@ export default function Dashboard() {
       {/* System Health Modal */}
       {showHealthModal && (
         <SystemHealthModal onClose={() => setShowHealthModal(false)} />
+      )}
+
+      {/* Command Palette */}
+      {showCommandPalette && (
+        <CommandPalette
+          onClose={() => setShowCommandPalette(false)}
+          servers={servers}
+          onCreateServer={() => setShowCreateModal(true)}
+          onStartServer={(id) => startServerMutation.mutate(id)}
+          onStopServer={(id) => stopServerMutation.mutate(id)}
+          onDeleteServer={(id) => {
+            serversApi.delete(id).then(() => {
+              queryClient.invalidateQueries({ queryKey: ['servers'] });
+            });
+          }}
+          onShowHealth={() => setShowHealthModal(true)}
+          onLogout={handleLogout}
+        />
       )}
     </div>
   );
