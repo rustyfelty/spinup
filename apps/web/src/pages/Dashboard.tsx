@@ -16,6 +16,10 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  User,
+  LogOut,
+  Settings,
+  ChevronDown,
 } from 'lucide-react';
 import { serversApi, authApi } from '../lib/api';
 import type { Server, ServerStatus } from '@spinup/shared';
@@ -69,6 +73,7 @@ export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -103,6 +108,16 @@ export default function Dashboard() {
     mutationFn: serversApi.stop,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
+    },
+  });
+
+  // Logout mutation
+  const logoutMutation = useMutation({
+    mutationFn: authApi.logout,
+    onSuccess: () => {
+      queryClient.clear();
+      navigate('/');
+      window.location.reload();
     },
   });
 
@@ -142,6 +157,10 @@ export default function Dashboard() {
   const handleStopServer = (e: React.MouseEvent, serverId: string) => {
     e.stopPropagation();
     stopServerMutation.mutate(serverId);
+  };
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   if (authLoading) {
@@ -232,6 +251,63 @@ export default function Dashboard() {
                 <Plus className="w-4 h-4" />
                 <span>Create Server</span>
               </button>
+
+              {/* User Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-600" />
+                </button>
+
+                {showUserMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowUserMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                      {/* User Info */}
+                      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {authData?.user?.email || 'User'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {authData?.org?.name}
+                        </p>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="py-2">
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            // TODO: Navigate to settings
+                          }}
+                          className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Settings className="w-4 h-4" />
+                          <span>Settings</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            handleLogout();
+                          }}
+                          className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Logout</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
