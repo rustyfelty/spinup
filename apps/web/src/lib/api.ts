@@ -76,3 +76,48 @@ export const configApi = {
     return data
   },
 }
+
+// System API
+export const systemApi = {
+  async getHealth() {
+    const { data } = await api.get('/api/system/health')
+    return data as {
+      timestamp: string
+      status: 'healthy' | 'degraded' | 'unhealthy'
+      checks: {
+        database: { status: 'healthy' | 'unhealthy'; latency: number; error: string | null }
+        docker: { status: 'healthy' | 'unhealthy'; containers: number; error: string | null }
+        disk: { status: 'healthy' | 'unhealthy'; usagePercent: number; error: string | null }
+        memory: { status: 'healthy' | 'unhealthy'; usagePercent: number; availableMB: number }
+        redis: { status: 'healthy' | 'unhealthy'; error: string | null }
+      }
+    }
+  },
+
+  async getResources() {
+    const { data } = await api.get('/api/system/resources')
+    return data as {
+      memory: {
+        total: number
+        used: number
+        free: number
+        allocated: number
+        available: number
+      }
+      cpu: {
+        cores: number
+        loadAverage: number[]
+        totalShares: number
+        allocatedShares: number
+        availableShares: number
+      }
+      servers: Array<{
+        id: string
+        name: string
+        gameKey: string
+        allocated: { memory: number; cpu: number }
+        used: { memory: number; cpuPercent: number } | null
+      }>
+    }
+  },
+}

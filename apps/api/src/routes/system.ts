@@ -123,5 +123,90 @@ export const systemRoutes: FastifyPluginCallback = (app, _opts, done) => {
     }
   });
 
+  // Health check endpoint
+  app.get("/health", async (req, reply) => {
+    const checks = {
+      timestamp: new Date().toISOString(),
+      status: "healthy" as "healthy" | "degraded" | "unhealthy",
+      checks: {
+        database: { status: "unknown" as "healthy" | "unhealthy", latency: 0, error: null as string | null },
+        docker: { status: "unknown" as "healthy" | "unhealthy", containers: 0, error: null as string | null },
+        disk: { status: "unknown" as "healthy" | "unhealthy", usagePercent: 0, error: null as string | null },
+        memory: { status: "unknown" as "healthy" | "unhealthy", usagePercent: 0, availableMB: 0 },
+        redis: { status: "unknown" as "healthy" | "unhealthy", error: null as string | null },
+      }
+    };
+
+    // Check database
+    try {
+      const dbStart = Date.now();
+      await prisma.$queryRaw`SELECT 1`;
+      checks.checks.database.latency = Date.now() - dbStart;
+      checks.checks.database.status = checks.checks.database.latency < 100 ? "healthy" : "unhealthy";
+    } catch (error: any) {
+      checks.checks.database.status = "unhealthy";
+      checks.checks.database.error = error.message;
+    }
+
+    // Check Docker
+    try {
+      const containers = await docker.listContainers({ all: true });
+      checks.checks.docker.containers = containers.length;
+      checks.checks.docker.status = "healthy";
+    } catch (error: any) {
+      checks.checks.docker.status = "unhealthy";
+      checks.checks.docker.error = error.message;
+    }
+
+    // Check Memory
+    const totalMemory = os.totalmem();
+    const freeMemory = os.freemem();
+    const memoryUsagePercent = Math.round(((totalMemory - freeMemory) / totalMemory) * 100);
+    checks.checks.memory.usagePercent = memoryUsagePercent;
+    checks.checks.memory.availableMB = Math.floor(freeMemory / (1024 * 1024));
+    checks.checks.memory.status = memoryUsagePercent > 90 ? "unhealthy" : "healthy";
+
+    // Check Disk (using filesystem stats)
+    try {
+      const { execSync } = await import("node:child_process");
+      const diskInfo = execSync("df -k /").toString();
+      const lines = diskInfo.split("\n");
+      if (lines.length > 1) {
+        const parts = lines[1].split(/\s+/);
+        const usagePercent = parseInt(parts[4]?.replace("%", "") || "0");
+        checks.checks.disk.usagePercent = usagePercent;
+        checks.checks.disk.status = usagePercent > 90 ? "unhealthy" : "healthy";
+      }
+    } catch (error: any) {
+      checks.checks.disk.error = error.message;
+      checks.checks.disk.status = "unhealthy";
+    }
+
+    // Check Redis (BullMQ connection)
+    try {
+      const { Queue } = await import("bullmq");
+      const testQueue = new Queue("server-jobs", { connection: { host: "localhost", port: 6379 } });
+      await testQueue.client.ping();
+      await testQueue.close();
+      checks.checks.redis.status = "healthy";
+    } catch (error: any) {
+      checks.checks.redis.status = "unhealthy";
+      checks.checks.redis.error = error.message;
+    }
+
+    // Determine overall status
+    const unhealthyCount = Object.values(checks.checks).filter(c => c.status === "unhealthy").length;
+    if (unhealthyCount === 0) {
+      checks.status = "healthy";
+    } else if (unhealthyCount <= 1) {
+      checks.status = "degraded";
+    } else {
+      checks.status = "unhealthy";
+    }
+
+    const statusCode = checks.status === "healthy" ? 200 : checks.status === "degraded" ? 200 : 503;
+    return reply.code(statusCode).send(checks);
+  });
+
   done();
 };

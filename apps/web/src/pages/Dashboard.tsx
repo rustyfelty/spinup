@@ -25,6 +25,7 @@ import { serversApi, authApi } from '../lib/api';
 import type { Server, ServerStatus } from '@spinup/shared';
 import { GAMES, type GameImage } from '@spinup/shared';
 import CreateServerWizard from '../components/CreateServerWizard';
+import SystemHealthModal from '../components/SystemHealthModal';
 
 // Status color mappings
 const statusColors: Record<ServerStatus, string> = {
@@ -71,6 +72,7 @@ type FilterStatus = 'all' | ServerStatus;
 
 export default function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showHealthModal, setShowHealthModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -240,7 +242,10 @@ export default function Dashboard() {
               <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <Shield className="w-5 h-5 text-gray-600" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
+              <button
+                onClick={() => setShowHealthModal(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative"
+              >
                 <Activity className="w-5 h-5 text-gray-600" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
               </button>
@@ -478,6 +483,11 @@ export default function Dashboard() {
             queryClient.invalidateQueries({ queryKey: ['servers'] });
           }}
         />
+      )}
+
+      {/* System Health Modal */}
+      {showHealthModal && (
+        <SystemHealthModal onClose={() => setShowHealthModal(false)} />
       )}
     </div>
   );
