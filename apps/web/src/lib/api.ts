@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { Server, User, Organization } from '@spinup/shared'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -44,12 +44,16 @@ export const serversApi = {
   },
 
   async start(id: string) {
-    const { data } = await api.post(`/api/servers/${id}/start`)
+    const { data } = await api.post(`/api/servers/${id}/start`, {}, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
     return data
   },
 
   async stop(id: string) {
-    const { data } = await api.post(`/api/servers/${id}/stop`)
+    const { data } = await api.post(`/api/servers/${id}/stop`, {}, {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
     return data
   },
 

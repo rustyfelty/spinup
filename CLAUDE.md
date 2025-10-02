@@ -1,5 +1,81 @@
 # SpinUp Development Guidelines
 
+## CRITICAL: Port Management and Server Restarts
+
+### Always Kill Old Processes Before Starting Dev Servers
+
+The dev servers (API and Web) MUST run on specific ports that match the Caddy reverse proxy configuration:
+- **API**: MUST run on port 8080
+- **Web**: MUST run on port 5173
+
+**IMPORTANT**: When restarting dev servers, ALWAYS use the clean restart script:
+
+```bash
+cd /var/www/spinup
+./clean-restart.sh
+```
+
+This script automatically:
+- Kills all old dev processes (concurrently, tsx, vite)
+- Force-kills processes holding ports 8080 and 5173
+- Verifies NODE_ENV is set to development
+- Starts dev servers on the correct ports
+
+**Manual cleanup** (if script doesn't work):
+```bash
+# Kill all dev processes
+pkill -9 -f "concurrently.*dev"
+pkill -9 -f "tsx watch"
+pkill -9 -f "vite"
+
+# Force kill processes on specific ports
+kill -9 $(lsof -t -i:8080) 2>/dev/null || true
+kill -9 $(lsof -t -i:5173) 2>/dev/null || true
+
+# Start fresh
+cd /var/www/spinup
+pnpm dev
+```
+
+### Why This Matters
+
+1. **Port conflicts**: If old processes hold ports 8080 or 5173, new instances will bind to alternative ports (5174, 5175, etc.)
+2. **502 errors**: Caddy is configured to proxy to specific ports. If the app runs on a different port, you'll get 502 Bad Gateway
+3. **Stale code**: Old processes may run outdated code with `NODE_ENV=production` or old environment variables
+4. **Mixed state**: Multiple processes can cause database conflicts and confusing behavior
+
+### Before Every Development Session
+
+**Use the clean restart script:**
+```bash
+cd /var/www/spinup
+./clean-restart.sh
+```
+
+**To verify servers are running correctly:**
+```bash
+# Check ports
+lsof -i :8080  # Should show node (API)
+lsof -i :5173  # Should show node (Vite)
+
+# Test API
+curl http://localhost:8080/api/system/health
+
+# Test Web (should return HTML)
+curl http://localhost:5173/
+```
+
+### Caddy Configuration (DO NOT CHANGE)
+
+The Caddy reverse proxy at `/etc/caddy/Caddyfile` is configured for:
+- Web frontend: `localhost:5173` → `https://daboyz.live`
+- API backend: `localhost:8080` → `https://daboyz.live/api/*`
+
+If you change these ports, you MUST update the Caddyfile and reload Caddy:
+```bash
+sudo systemctl reload caddy
+```
+
 ## Troubleshooting Checklist
 
 When debugging issues, ALWAYS follow this checklist from basic to complex:

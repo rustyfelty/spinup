@@ -31,7 +31,7 @@ export default function ServerDetail() {
     queryKey: ['logs', id],
     queryFn: async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/servers/${id}/logs`, {
+        const response = await fetch(`/api/servers/${id}/logs`, {
           credentials: 'include'
         })
         if (!response.ok) return []
