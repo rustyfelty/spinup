@@ -44,16 +44,12 @@ export const serversApi = {
   },
 
   async start(id: string) {
-    const { data } = await api.post(`/api/servers/${id}/start`, {}, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    })
+    const { data } = await api.post(`/api/servers/${id}/start`)
     return data
   },
 
   async stop(id: string) {
-    const { data } = await api.post(`/api/servers/${id}/stop`, {}, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    })
+    const { data } = await api.post(`/api/servers/${id}/stop`)
     return data
   },
 
