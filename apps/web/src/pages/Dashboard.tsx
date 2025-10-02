@@ -20,6 +20,7 @@ import {
   LogOut,
   Settings,
   ChevronDown,
+  Copy,
 } from 'lucide-react';
 import { serversApi, authApi } from '../lib/api';
 import type { Server, ServerStatus } from '@spinup/shared';
@@ -309,7 +310,7 @@ export default function Dashboard() {
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
-                            // TODO: Navigate to settings
+                            navigate('/settings');
                           }}
                           className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                         >
@@ -570,11 +571,48 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
 
         {server.status === 'RUNNING' && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Port</span>
-              <span className="font-mono text-gray-900">{primaryPort}</span>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">IP Address</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-mono text-gray-900">localhost</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText('localhost');
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copy IP"
+                  >
+                    <Copy className="w-3 h-3 text-gray-500" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500">Port</span>
+                <div className="flex items-center space-x-2">
+                  <span className="font-mono text-gray-900">{primaryPort}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(primaryPort.toString());
+                    }}
+                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                    title="Copy Port"
+                  >
+                    <Copy className="w-3 h-3 text-gray-500" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 pt-3">
+            <div className="flex items-center space-x-2 pt-2">
+              <a
+                href={`steam://connect/localhost:${primaryPort}`}
+                onClick={(e) => e.stopPropagation()}
+                className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm text-center"
+              >
+                Connect via Steam
+              </a>
               <button
                 onClick={onStop}
                 disabled={isStopping}

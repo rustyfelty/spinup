@@ -1,6 +1,24 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../services/prisma";
 
+// Define JWT payload type
+interface JWTPayload {
+  sub: string;  // user ID
+  org: string;  // organization ID
+  iat?: number;
+  exp?: number;
+}
+
+// Extend FastifyRequest to include typed user and custom properties
+declare module "fastify" {
+  interface FastifyRequest {
+    user?: JWTPayload;
+    authorizedServer?: any; // Server from Prisma
+    userId?: string;
+    orgId?: string;
+  }
+}
+
 /**
  * Authentication middleware - verifies JWT token
  */
@@ -23,9 +41,17 @@ export async function authorizeServer(request: FastifyRequest, reply: FastifyRep
     // First ensure authentication
     await request.jwtVerify();
 
-    const userId = (request.user as any).sub;
-    const orgId = (request.user as any).org;
-    const serverId = (request.params as any).id;
+    const userId = request.user?.sub;
+    const orgId = request.user?.org;
+    const serverId = (request.params as { id?: string }).id;
+
+    if (!userId || !orgId) {
+      reply.status(401).send({
+        error: "Unauthorized",
+        message: "Invalid authentication token"
+      });
+      return;
+    }
 
     if (!serverId) {
       reply.status(400).send({
@@ -57,9 +83,9 @@ export async function authorizeServer(request: FastifyRequest, reply: FastifyRep
     }
 
     // Attach server and user info to request for use in handlers
-    (request as any).authorizedServer = server;
-    (request as any).userId = userId;
-    (request as any).orgId = orgId;
+    request.authorizedServer = server;
+    request.userId = userId;
+    request.orgId = orgId;
 
   } catch (error: any) {
     reply.status(401).send({
@@ -77,13 +103,21 @@ export async function authorizeOrgAccess(request: FastifyRequest, reply: Fastify
   try {
     await request.jwtVerify();
 
-    const userId = (request.user as any).sub;
-    const userOrgId = (request.user as any).org;
+    const userId = request.user?.sub;
+    const userOrgId = request.user?.org;
+
+    if (!userId || !userOrgId) {
+      reply.status(401).send({
+        error: "Unauthorized",
+        message: "Invalid authentication token"
+      });
+      return;
+    }
 
     // For GET requests with orgId query param
-    const queryOrgId = (request.query as any).orgId;
+    const queryOrgId = (request.query as { orgId?: string }).orgId;
     // For POST requests with orgId in body
-    const bodyOrgId = (request.body as any)?.orgId;
+    const bodyOrgId = (request.body as { orgId?: string })?.orgId;
 
     const requestedOrgId = queryOrgId || bodyOrgId;
 
@@ -105,8 +139,8 @@ export async function authorizeOrgAccess(request: FastifyRequest, reply: Fastify
     }
 
     // Attach user info to request
-    (request as any).userId = userId;
-    (request as any).orgId = userOrgId;
+    request.userId = userId;
+    request.orgId = userOrgId;
 
   } catch (error: any) {
     reply.status(401).send({

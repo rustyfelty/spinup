@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: spinup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spinup
+      POSTGRES_USER: spinup
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - spinup-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spinup"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for BullMQ job queue
+  redis:
+    image: redis:7-alpine
+    container_name: spinup-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - spinup-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # SpinUp API
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: spinup-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      API_JWT_SECRET: ${API_JWT_SECRET}
+      SERVICE_TOKEN: ${SERVICE_TOKEN}
+      API_PORT: ${API_PORT:-8080}
+      WEB_ORIGIN: ${WEB_ORIGIN}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DATA_DIR: /srv/spinup
+      DOCKER_HOST: unix:///var/run/docker.sock
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - server-data:/srv/spinup
+    networks:
+      - spinup-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/system/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # SpinUp Web App
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: spinup-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - spinup-network
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Discord Bot (Optional)
+  bot:
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile
+    container_name: spinup-bot
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      SERVICE_TOKEN: ${SERVICE_TOKEN}
+      API_URL: http://api:8080
+    networks:
+      - spinup-network
+    depends_on:
+      - api
+    profiles:
+      - discord  # Only start if --profile discord is used
+
+networks:
+  spinup-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  server-data:
+    driver: local

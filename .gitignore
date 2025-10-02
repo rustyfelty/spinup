@@ -39,6 +39,15 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
+tests/e2e/
+
+# Test files
+*.test.mjs
+test-*.mjs
+test-*.png
+*.png
 
 # Misc
 .cache/

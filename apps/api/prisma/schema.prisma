@@ -202,3 +202,11 @@ model CustomScript {
   @@index([serverId])
   @@index([scriptHash])
 }
+
+model Settings {
+  id          String   @id @default("global") // Singleton pattern - only one settings record
+  webDomain   String   @default("http://localhost:5173") // Public web app domain
+  apiDomain   String   @default("http://localhost:8080") // Public API domain
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}

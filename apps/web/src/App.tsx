@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import ServerDetail from './pages/ServerDetail'
 import MagicLinkVerify from './pages/MagicLinkVerify'
 import DiscordIntegration from './pages/DiscordIntegration'
+import Settings from './pages/Settings'
 import Login from './pages/Login'
 
 const queryClient = new QueryClient({
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/verify/:token" element={<MagicLinkVerify />} />
           <Route path="/integrations/discord" element={<DiscordIntegration />} />
           <Route path="/discord" element={<DiscordIntegration />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </Router>
     </QueryClientProvider>

@@ -4,12 +4,28 @@ import { randomUUID } from "crypto";
 import { prisma } from "../services/prisma";
 import { magicLinkIssueSchema } from "@spinup/shared";
 
-const JWT_SECRET = process.env.API_JWT_SECRET || "devsecret123456789";
-const SERVICE_TOKEN = process.env.SERVICE_TOKEN || "supersecretservicetoken";
+// Validate secrets at module load time
+const JWT_SECRET = process.env.API_JWT_SECRET;
+const SERVICE_TOKEN = process.env.SERVICE_TOKEN;
+
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error("API_JWT_SECRET must be set and at least 32 characters long");
+}
+
+if (!SERVICE_TOKEN || SERVICE_TOKEN.length < 32) {
+  throw new Error("SERVICE_TOKEN must be set and at least 32 characters long");
+}
 
 export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
   // Issue magic link (called by Discord bot)
-  app.post("/discord/issue", async (req, reply) => {
+  app.post("/discord/issue", {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: "1 minute"
+      }
+    }
+  }, async (req, reply) => {
     // Validate service token
     const authHeader = req.headers.authorization;
     if (authHeader !== `Bearer ${SERVICE_TOKEN}`) {
@@ -109,7 +125,14 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
   });
 
   // Consume magic link (called by web app)
-  app.get("/discord/consume", async (req, reply) => {
+  app.get("/discord/consume", {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: "1 minute"
+      }
+    }
+  }, async (req, reply) => {
     const { token } = req.query as { token?: string };
 
     if (!token) {
@@ -118,7 +141,7 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
 
     try {
       // Verify JWT
-      const payload = jwt.verify(token, JWT_SECRET) as any;
+      const payload = jwt.verify(token, JWT_SECRET) as { sub: string; org_id: string; jti: string };
 
       // Check if token has been used
       const loginToken = await prisma.loginToken.findUnique({
@@ -153,16 +176,15 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         { expiresIn: "1d" }
       );
 
-      // Set session cookie - no sameSite in dev for cross-port compatibility
-      const cookieOptions: any = {
+      // Set session cookie with secure options
+      const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         path: "/",
-        maxAge: 24 * 60 * 60 * 1000 // 1 day
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        sameSite: (process.env.NODE_ENV === "production" ? "strict" : "lax") as "strict" | "lax",
+        signed: true
       };
-      if (process.env.NODE_ENV === "production") {
-        cookieOptions.sameSite = "lax";
-      }
       reply.setCookie("spinup_sess", sessionToken, cookieOptions);
 
       // Redirect to dashboard
@@ -189,8 +211,12 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
       // This will use the JWT from the cookie (configured in index.ts)
       await req.jwtVerify();
 
-      const userId = (req.user as any).sub;
-      const orgId = (req.user as any).org;
+      const userId = req.user?.sub;
+      const orgId = req.user?.org;
+
+      if (!userId || !orgId) {
+        return reply.code(401).send({ error: "Invalid authentication token" });
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -232,7 +258,14 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
 
   // Development-only login (no Discord required)
   if (process.env.NODE_ENV !== "production") {
-    app.post("/dev/login", async (req, reply) => {
+    app.post("/dev/login", {
+      config: {
+        rateLimit: {
+          max: 5,
+          timeWindow: "1 minute"
+        }
+      }
+    }, async (req, reply) => {
       try {
         // Create or get dev org
         const org = await prisma.org.upsert({
@@ -283,14 +316,15 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
           { expiresIn: "7d" }
         );
 
-        // Set session cookie - no sameSite in dev for cross-port compatibility
-        const cookieOptions: any = {
+        // Set session cookie with secure options (dev mode has relaxed settings)
+        const cookieOptions = {
           httpOnly: true,
           secure: false,
           path: "/",
-          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+          sameSite: "lax" as const,
+          signed: true
         };
-        // Don't set sameSite in development to allow cross-port requests
         reply.setCookie("spinup_sess", sessionToken, cookieOptions);
 
         return reply.send({

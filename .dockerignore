@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Development
+.git/
+.github/
+.vscode/
+.idea/
+
+# Build outputs (will be rebuilt)
+dist/
+build/
+.next/
+out/
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+tests/e2e/
+*.test.mjs
+test-*.mjs
+*.spec.ts
+*.spec.js
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.cache/
+.temp/
+.tmp/
+*.png
+*.jpg
+*.gif
+
+# Documentation
+README.md
+DEPLOY.md
+*.md
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+apps/api/prisma/*.db
+apps/api/prisma/*.db-journal
+apps/api/prisma/migrations/

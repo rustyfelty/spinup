@@ -4,16 +4,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, Play, Square, RotateCw, Trash2, Settings, Terminal,
   HardDrive, Activity, Clock, Globe, Shield, AlertCircle, CheckCircle,
-  XCircle, Loader2, Copy, ExternalLink, Save, RefreshCw
+  XCircle, Loader2, Copy, ExternalLink, Save, RefreshCw, FolderOpen
 } from 'lucide-react'
 import { serversApi, configApi } from '../lib/api'
 import type { Server } from '@spinup/shared'
+import FileManager from '../components/FileManager'
 
 export default function ServerDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'console' | 'settings'>('console')
+  const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'console' | 'files' | 'settings'>('console')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [consoleLogs, setConsoleLogs] = useState<string[]>([])
 
@@ -271,6 +272,7 @@ export default function ServerDetail() {
                 { id: 'overview', label: 'Overview', icon: Activity },
                 { id: 'config', label: 'Configuration', icon: Settings },
                 { id: 'console', label: 'Console', icon: Terminal },
+                { id: 'files', label: 'Files', icon: FolderOpen },
                 { id: 'settings', label: 'Settings', icon: Shield },
               ].map((tab) => (
                 <button
@@ -333,6 +335,25 @@ export default function ServerDetail() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'files' && (
+              <div>
+                <h3 className="text-lg font-medium mb-4">File Manager</h3>
+                <p className="text-gray-600 mb-6">
+                  Browse, edit, and manage files in your server's data directory.
+                </p>
+                {server.status === 'RUNNING' || server.status === 'STOPPED' ? (
+                  <FileManager serverId={server.id} />
+                ) : (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 inline mr-2" />
+                    <span className="text-yellow-700">
+                      Server must be in RUNNING or STOPPED state to access files.
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

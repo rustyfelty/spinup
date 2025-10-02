@@ -103,7 +103,15 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
   /**
    * POST / - Create a new server (enqueue CREATE job)
    */
-  fastify.post<{ Body: CreateServerBody }>("/", { preHandler: authorizeOrgAccess }, async (request, reply) => {
+  fastify.post<{ Body: CreateServerBody }>("/", {
+    preHandler: authorizeOrgAccess,
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: "5 minutes"
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { orgId, name, gameKey, memoryCap, cpuShares } = request.body;
 

@@ -166,17 +166,16 @@ export const systemRoutes: FastifyPluginCallback = (app, _opts, done) => {
     checks.checks.memory.availableMB = Math.floor(freeMemory / (1024 * 1024));
     checks.checks.memory.status = memoryUsagePercent > 90 ? "unhealthy" : "healthy";
 
-    // Check Disk (using filesystem stats)
+    // Check Disk (using statfs API - no shell execution needed)
     try {
-      const { execSync } = await import("node:child_process");
-      const diskInfo = execSync("df -k /").toString();
-      const lines = diskInfo.split("\n");
-      if (lines.length > 1) {
-        const parts = lines[1].split(/\s+/);
-        const usagePercent = parseInt(parts[4]?.replace("%", "") || "0");
-        checks.checks.disk.usagePercent = usagePercent;
-        checks.checks.disk.status = usagePercent > 90 ? "unhealthy" : "healthy";
-      }
+      const { statfs } = await import("node:fs/promises");
+      const stats = await statfs("/");
+      const total = stats.blocks * stats.bsize;
+      const free = stats.bfree * stats.bsize;
+      const used = total - free;
+      const usagePercent = Math.round((used / total) * 100);
+      checks.checks.disk.usagePercent = usagePercent;
+      checks.checks.disk.status = usagePercent > 90 ? "unhealthy" : "healthy";
     } catch (error: any) {
       checks.checks.disk.error = error.message;
       checks.checks.disk.status = "unhealthy";
@@ -185,7 +184,12 @@ export const systemRoutes: FastifyPluginCallback = (app, _opts, done) => {
     // Check Redis (BullMQ connection)
     try {
       const { Queue } = await import("bullmq");
-      const testQueue = new Queue("server-jobs", { connection: { host: "localhost", port: 6379 } });
+      const testQueue = new Queue("server-jobs", {
+        connection: {
+          host: process.env.REDIS_HOST || "localhost",
+          port: parseInt(process.env.REDIS_PORT || "6379")
+        }
+      });
       await testQueue.client.ping();
       await testQueue.close();
       checks.checks.redis.status = "healthy";

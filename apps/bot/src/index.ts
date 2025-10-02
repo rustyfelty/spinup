@@ -6,8 +6,13 @@ const token = process.env.DISCORD_BOT_TOKEN!
 const clientId = process.env.DISCORD_CLIENT_ID!
 const API_URL = process.env.API_URL || 'http://localhost:8080'
 const WEB_URL = process.env.WEB_URL || 'http://localhost:5173'
-const SERVICE_TOKEN = process.env.SERVICE_TOKEN || 'supersecretservicetoken'
+const SERVICE_TOKEN = process.env.SERVICE_TOKEN
 const DEV_GUILD = process.env.DISCORD_TEST_GUILD
+
+// Validate required configuration
+if (!SERVICE_TOKEN || SERVICE_TOKEN.length < 32) {
+  throw new Error('SERVICE_TOKEN must be set and at least 32 characters long')
+}
 
 // Build slash commands
 const commands = [

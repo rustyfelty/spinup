@@ -9,6 +9,11 @@ export const configRoutes: FastifyPluginCallback = (app, _opts, done) => {
   app.get("/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
 
+    // Validate server ID format (UUIDs or cUIDs only)
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return reply.code(400).send({ error: "Invalid server ID format" });
+    }
+
     try {
       const server = await prisma.server.findUnique({
         where: { id }
@@ -68,6 +73,11 @@ export const configRoutes: FastifyPluginCallback = (app, _opts, done) => {
   // Update server configuration
   app.put("/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
+
+    // Validate server ID format (UUIDs or cUIDs only)
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return reply.code(400).send({ error: "Invalid server ID format" });
+    }
 
     try {
       const server = await prisma.server.findUnique({
@@ -153,6 +163,11 @@ export const configRoutes: FastifyPluginCallback = (app, _opts, done) => {
   // Get config history
   app.get("/:id/history", async (req, reply) => {
     const { id } = req.params as { id: string };
+
+    // Validate server ID format (UUIDs or cUIDs only)
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      return reply.code(400).send({ error: "Invalid server ID format" });
+    }
 
     try {
       const server = await prisma.server.findUnique({

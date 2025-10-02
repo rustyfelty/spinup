@@ -121,3 +121,136 @@ export const systemApi = {
     }
   },
 }
+
+// AI API
+export const aiApi = {
+  async initSession(serverId: string, context: {
+    gameName?: string
+    gameType?: 'steam' | 'direct-download' | 'wine' | 'custom'
+    ports?: Array<{ container: number; proto: 'tcp' | 'udp' }>
+    envVars?: Record<string, string>
+  }) {
+    const { data } = await api.post('/api/ai/custom-server/init', { serverId, ...context })
+    return data as { sessionId: string; greeting: string }
+  },
+
+  async chat(sessionId: string, message: string) {
+    const { data } = await api.post('/api/ai/custom-server/chat', { sessionId, message })
+    return data as {
+      message: string
+      script?: string
+      status: 'researching' | 'drafting' | 'ready' | 'error'
+      metadata?: {
+        ports: Array<{ container: number; proto: 'tcp' | 'udp' }>
+        envVars: Record<string, string>
+      }
+    }
+  },
+
+  async validateScript(sessionId: string, script: string) {
+    const { data } = await api.post('/api/ai/custom-server/validate', { sessionId, script })
+    return data as {
+      valid: boolean
+      issues: Array<{ severity: 'error' | 'warning'; message: string; line?: number }>
+      suggestions: string[]
+    }
+  },
+
+  async finalizeScript(sessionId: string, script: string, metadata: {
+    ports: Array<{ container: number; proto: 'tcp' | 'udp' }>
+    envVars: Record<string, string>
+  }) {
+    const { data } = await api.post('/api/ai/custom-server/finalize', { sessionId, script, metadata })
+    return data as {
+      script: string
+      scriptHash: string
+      ports: Array<{ container: number; proto: 'tcp' | 'udp' }>
+      envVars: Record<string, string>
+    }
+  },
+
+  async getSession(sessionId: string) {
+    const { data } = await api.get(`/api/ai/custom-server/session/${sessionId}`)
+    return data as {
+      id: string
+      context: any
+      messageCount: number
+      hasScript: boolean
+      expiresAt: string
+    }
+  },
+}
+
+// Files API
+export interface FileInfo {
+  name: string
+  path: string
+  type: 'file' | 'directory'
+  size: number
+  modified: string
+  permissions: string
+}
+
+export const filesApi = {
+  async list(serverId: string, path: string = '/') {
+    const { data } = await api.get('/api/files/list', { params: { serverId, path } })
+    return data.files as FileInfo[]
+  },
+
+  async read(serverId: string, path: string) {
+    const { data } = await api.get('/api/files/read', { params: { serverId, path } })
+    return data.content as string
+  },
+
+  async write(serverId: string, path: string, content: string) {
+    const { data } = await api.post('/api/files/write', { serverId, path, content })
+    return data
+  },
+
+  async delete(serverId: string, path: string) {
+    const { data } = await api.delete('/api/files/delete', { data: { serverId, path } })
+    return data
+  },
+
+  async createDirectory(serverId: string, path: string) {
+    const { data } = await api.post('/api/files/mkdir', { serverId, path })
+    return data
+  },
+
+  async download(serverId: string, path: string) {
+    const response = await api.get('/api/files/download', {
+      params: { serverId, path },
+      responseType: 'blob'
+    })
+    const filename = path.split('/').pop() || 'download'
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+  },
+
+  async upload(serverId: string, path: string, file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('serverId', serverId)
+    formData.append('path', path)
+    const { data } = await api.post('/api/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return data
+  },
+
+  async extractZip(serverId: string, zipPath: string, extractPath?: string) {
+    const { data } = await api.post('/api/files/extract-zip', { serverId, zipPath, extractPath })
+    return data
+  },
+
+  async compressZip(serverId: string, sourcePaths: string[], zipPath: string) {
+    const { data } = await api.post('/api/files/compress-zip', { serverId, sourcePaths, zipPath })
+    return data
+  },
+}

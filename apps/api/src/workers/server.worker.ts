@@ -6,7 +6,10 @@ import { prisma } from "../services/prisma";
 import { GAMES } from "@spinup/shared";
 
 const docker = new Docker(); // Uses /var/run/docker.sock by default
-const connection = { host: "localhost", port: 6379 };
+const connection = {
+  host: process.env.REDIS_HOST || "localhost",
+  port: parseInt(process.env.REDIS_PORT || "6379")
+};
 const queue = new Queue("server-jobs", { connection });
 
 export function startWorker() {
@@ -66,34 +69,64 @@ export function startWorker() {
               });
 
               if (!customScript) {
-                throw new Error("Custom script not found for server");
+                // Create a placeholder script that waits indefinitely
+                const placeholderScript = `#!/bin/bash
+set -euo pipefail
+
+echo "============================================"
+echo " Custom Server Container Started"
+echo "============================================"
+echo ""
+echo "This server needs configuration via the AI Setup tab."
+echo "Please use the AI Setup tab to generate a server script."
+echo ""
+echo "Container will stay running and wait for configuration..."
+echo ""
+
+# Keep container alive
+exec tail -f /dev/null
+`;
+                const scriptPath = path.join(dataPath, "server_init.sh");
+                await fs.writeFile(scriptPath, placeholderScript, { mode: 0o755 });
+
+                // Mount script into container
+                binds.push(`${scriptPath}:/startup/server_init.sh:ro`);
+
+                // Use default port
+                portMappings = [{
+                  container: 27015,
+                  host: await allocateHostPort(27015),
+                  proto: "tcp" as const
+                }];
+              } else {
+                // Write custom script to startup directory
+                const scriptPath = path.join(dataPath, "server_init.sh");
+                await fs.writeFile(scriptPath, customScript.content, { mode: 0o755 });
+
+                // Mount script into container
+                binds.push(`${scriptPath}:/startup/server_init.sh:ro`);
+
+                // Use ports from custom script
+                const portSpecs = customScript.portSpecs as any[];
+                portMappings = await Promise.all(
+                  portSpecs.map(async (p) => ({
+                    container: p.container,
+                    host: await allocateHostPort(p.container),
+                    proto: p.proto
+                  }))
+                );
               }
 
-              // Write script to startup directory
-              const scriptPath = path.join(dataPath, "server_init.sh");
-              await fs.writeFile(scriptPath, customScript.content, { mode: 0o755 });
+              // Add custom environment variables (if script exists)
+              if (customScript) {
+                const customEnv = customScript.envVars as Record<string, string>;
+                envVars = [
+                  ...envVars,
+                  ...Object.entries(customEnv || {}).map(([k, v]) => `${k}=${v}`)
+                ];
 
-              // Mount script into container
-              binds.push(`${scriptPath}:/startup/server_init.sh:ro`);
-
-              // Use ports from custom script
-              const portSpecs = customScript.portSpecs as any[];
-              portMappings = await Promise.all(
-                portSpecs.map(async (p) => ({
-                  container: p.container,
-                  host: await allocateHostPort(p.container),
-                  proto: p.proto
-                }))
-              );
-
-              // Add custom environment variables
-              const customEnv = customScript.envVars as Record<string, string>;
-              envVars = [
-                ...envVars,
-                ...Object.entries(customEnv).map(([k, v]) => `${k}=${v}`)
-              ];
-
-              console.log(`[CUSTOM] Created custom server with script hash: ${customScript.scriptHash}`);
+                console.log(`[CUSTOM] Created custom server with script hash: ${customScript.scriptHash}`);
+              }
             } else {
               // Standard game server
               portMappings = await Promise.all(

@@ -350,7 +350,7 @@ export const GAMES: GameImage[] = [
   {
     key: "custom",
     name: "Custom Server (Advanced)",
-    image: "spinup/generic-server:latest",
+    image: "ubuntu:22.04",
     ports: [], // Dynamically configured
     envDefaults: {},
     volumePaths: { data: "/data" },

@@ -115,6 +115,54 @@ pnpm db:migrate # Run migrations
 pnpm build
 ```
 
+## Production Deployment
+
+SpinUp is production-ready with full Docker support, SSL/TLS configuration, and comprehensive security features.
+
+### Quick Production Setup
+
+```bash
+# 1. Clone repository
+git clone https://github.com/yourusername/spinup.git
+cd spinup
+
+# 2. Configure environment
+cp .env.production.example .env
+# Edit .env with your production values
+
+# 3. Generate secrets
+echo "API_JWT_SECRET=$(openssl rand -hex 32)" >> .env
+echo "SERVICE_TOKEN=$(openssl rand -hex 32)" >> .env
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" >> .env
+
+# 4. Deploy with Docker Compose
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Features
+
+✅ Production-ready Docker containers
+✅ Automatic SSL/TLS with Let's Encrypt (via Nginx/Traefik)
+✅ Health checks and monitoring endpoints
+✅ Database migrations and backups
+✅ Redis job queue with BullMQ
+✅ Secure environment configuration
+✅ Server-agnostic deployment
+
+For detailed production deployment instructions, see [DEPLOY.md](./DEPLOY.md)
+
+## Security
+
+SpinUp includes comprehensive security features:
+- JWT authentication with signed cookies
+- CORS protection
+- Path traversal prevention
+- Command injection mitigation
+- Rate limiting on sensitive endpoints
+- Production error handling (no stack traces exposed)
+- Input validation with Zod schemas
+- Script security validation for custom servers
+
 ## License
 
 MIT

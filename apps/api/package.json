@@ -15,20 +15,25 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@fastify/cors": "^8.5.0",
     "@fastify/cookie": "^9.2.0",
+    "@fastify/cors": "^8.5.0",
     "@fastify/jwt": "^7.2.4",
+    "@fastify/multipart": "^8.3.1",
     "@fastify/rate-limit": "^9.1.0",
     "@prisma/client": "^5.7.0",
     "@spinup/shared": "workspace:*",
+    "archiver": "^7.0.1",
     "bullmq": "^5.0.0",
     "dockerode": "^4.0.0",
     "fastify": "^4.25.0",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^3.3.2",
+    "tar-stream": "^3.1.7",
+    "unzipper": "^0.12.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.3",
     "@types/dockerode": "^3.3.23",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.0",
