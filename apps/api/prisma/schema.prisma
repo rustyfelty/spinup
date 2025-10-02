@@ -21,17 +21,23 @@ model User {
 }
 
 model Org {
-  id           String   @id @default(cuid())
-  discordGuild String   @unique
-  name         String
-  iconUrl      String?
-  defaultChan  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  discordGuild          String   @unique // Keep for backwards compatibility
+  discordGuildId        String?  @unique // New: proper Discord guild ID
+  discordGuildName      String?  // Guild name from Discord
+  discordIconHash       String?  // Guild icon hash
+  discordOwnerDiscordId String?  // Discord user ID of guild owner
+  name                  String
+  iconUrl               String?
+  defaultChan           String?
+  lastSyncAt            DateTime? // Last Discord sync timestamp
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   memberships  Membership[]
   servers      Server[]
   audits       Audit[]
+  settings     OrgSettings?
 }
 
 model Membership {
@@ -209,4 +215,107 @@ model Settings {
   apiDomain   String   @default("http://localhost:8080") // Public API domain
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+}
+
+model OrgSettings {
+  id                String   @id @default(cuid())
+  org               Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId             String   @unique
+
+  // Features
+  aiEnabled         Boolean  @default(true)
+  maxServers        Int      @default(10)
+  maxBackups        Int      @default(5)
+
+  // Default server settings
+  defaultMemory     Int      @default(2048) // MB
+  defaultCPU        Int      @default(2048) // CPU shares
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  rolePermissions   DiscordRolePermission[]
+
+  @@index([orgId])
+}
+
+// Capability-based permissions for Discord roles
+model DiscordRolePermission {
+  id                String      @id @default(cuid())
+  orgSettings       OrgSettings @relation(fields: [orgSettingsId], references: [id], onDelete: Cascade)
+  orgSettingsId     String
+
+  discordRoleId     String      // Discord role ID
+  discordRoleName   String      // Role name (for display)
+  discordRoleColor  Int         @default(0) // Role color from Discord
+
+  // Server Management Permissions
+  canCreateServer   Boolean     @default(false)
+  canDeleteServer   Boolean     @default(false)
+  canStartServer    Boolean     @default(false)
+  canStopServer     Boolean     @default(false)
+  canRestartServer  Boolean     @default(false)
+
+  // Configuration Permissions
+  canEditConfig     Boolean     @default(false)
+  canEditFiles      Boolean     @default(false)
+  canInstallMods    Boolean     @default(false)
+
+  // Backup Permissions
+  canCreateBackup   Boolean     @default(false)
+  canRestoreBackup  Boolean     @default(false)
+  canDeleteBackup   Boolean     @default(false)
+
+  // Monitoring Permissions
+  canViewLogs       Boolean     @default(true)  // Default to true for all
+  canViewMetrics    Boolean     @default(true)  // Default to true for all
+  canViewConsole    Boolean     @default(false)
+  canExecuteCommands Boolean    @default(false) // Console commands
+
+  // Admin Permissions
+  canManageMembers  Boolean     @default(false) // Add/remove users
+  canManageRoles    Boolean     @default(false) // Edit role permissions
+  canManageSettings Boolean     @default(false) // Org settings
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([orgSettingsId, discordRoleId])
+  @@index([orgSettingsId])
+}
+
+model SetupState {
+  id                  String   @id @default("singleton")
+
+  // Setup steps completed
+  systemConfigured    Boolean  @default(false)
+  oauthConfigured     Boolean  @default(false)
+  botConfigured       Boolean  @default(false)
+  guildSelected       Boolean  @default(false)
+  rolesConfigured     Boolean  @default(false)
+
+  // Setup data
+  selectedGuildId     String?
+  installerUserId     String?
+  installerDiscordId  String?
+
+  // Onboarding
+  onboardingComplete  Boolean  @default(false)
+  firstServerCreated  Boolean  @default(false)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model OAuthSession {
+  id            String   @id @default(cuid())
+  sessionToken  String   @unique
+  userId        String   // Discord user ID
+  accessToken   String   @db.Text
+  refreshToken  String   @db.Text
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([sessionToken])
+  @@index([expiresAt])
 }
