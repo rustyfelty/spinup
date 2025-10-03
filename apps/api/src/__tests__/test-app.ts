@@ -2,7 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import cors from '@fastify/cors';
-import setupV2Routes from '../routes/setup-v2';
+import setupRoutes from '../routes/setup';
 
 /**
  * Build a test Fastify application with setup routes configured
@@ -33,11 +33,8 @@ export async function build(): Promise<FastifyInstance> {
     }
   });
 
-  // Register setup-v2 routes under /api/setup prefix (matches production)
-  await app.register(setupV2Routes, { prefix: '/api/setup' });
-
-  // Also register under /api/setup-v2 for backward compatibility tests
-  await app.register(setupV2Routes, { prefix: '/api/setup-v2' });
+  // Register setup routes under /api/setup prefix (matches production)
+  await app.register(setupRoutes, { prefix: '/api/setup' });
 
   await app.ready();
 

@@ -11,8 +11,7 @@ import { systemRoutes } from "./routes/system";
 import { aiRoutes } from "./routes/ai";
 import { filesRoutes } from "./routes/files";
 import settingsRoutes from "./routes/settings";
-import { setupRoutes } from "./routes/setup";
-import setupV2Routes from "./routes/setup-v2";
+import setupRoutes from "./routes/setup";
 import { authRoutes } from "./routes/auth";
 import orgDiscordRoutes from "./routes/org-discord";
 import { startWorker } from "./workers/server.worker";
@@ -68,9 +67,8 @@ async function start() {
     if (!systemConfigured) {
       app.log.warn("System not configured - setup wizard mode activated");
 
-      // Register both setup routes (old and new)
+      // Register setup routes
       await app.register(setupRoutes, { prefix: "/api/setup" });
-      await app.register(setupV2Routes, { prefix: "/api/setup" });
 
       // Health check
       app.get("/health", async () => ({ status: "setup_required" }));
@@ -162,7 +160,7 @@ async function start() {
     await app.register(aiRoutes, { prefix: "/api/ai" });
     await app.register(filesRoutes, { prefix: "/api/files" });
     await app.register(settingsRoutes, { prefix: "/api/settings" });
-    await app.register(setupV2Routes, { prefix: "/api/setup" });
+    await app.register(setupRoutes, { prefix: "/api/setup" });
     await app.register(orgDiscordRoutes, { prefix: "/api/org" });
 
     // Root-level route for Discord OAuth callback

@@ -20,7 +20,7 @@ if (!SERVICE_TOKEN || SERVICE_TOKEN.length < 32) {
 // In-memory store for OAuth states (CSRF protection only)
 const oauthStates = new Map<string, { expiresAt: number; flow?: 'login' | 'setup' }>();
 
-// Export for use in setup-v2 routes
+// Export for use in setup routes
 export { oauthStates };
 
 export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {

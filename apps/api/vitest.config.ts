@@ -15,9 +15,9 @@ export default defineConfig({
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
-      '**/setup-v2-guild-roles.test.ts',
-      '**/setup-v2-select-guild.test.ts',
-      '**/setup-v2-oauth-callback.test.ts',
+      '**/setup-guild-roles.test.ts',
+      '**/setup-select-guild.test.ts',
+      '**/setup-oauth-callback.test.ts',
     ],
     // Run tests sequentially to avoid database conflicts
     // Tests share a single database and have overlapping data setup/teardown

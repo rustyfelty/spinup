@@ -128,29 +128,9 @@ describe('Setup V2 - Routing Configuration', () => {
     });
   });
 
-  describe('Backward Compatibility - /api/setup-v2 Prefix', () => {
-    it('should also respond to /api/setup-v2/status for backward compatibility', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/setup-v2/status'
-      });
-
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body).toHaveProperty('isComplete');
-    });
-
-    it('should also respond to /api/setup-v2/discord/callback', async () => {
-      const response = await app.inject({
-        method: 'GET',
-        url: '/api/setup-v2/discord/callback?code=test&state=invalid'
-      });
-
-      // Should get 400 (not 404)
-      expect(response.statusCode).toBe(400);
-      const body = JSON.parse(response.body);
-      expect(body.error).toBe('Bad Request');
-    });
+  describe.skip('Backward Compatibility - /api/setup-v2 Prefix (Removed)', () => {
+    // Skipped: setup-v2 routes have been renamed to setup (production v1)
+    // No backward compatibility needed since this is the first production release
   });
 
   describe('Frontend-Backend Endpoint Consistency', () => {

@@ -10,8 +10,7 @@ import { prisma } from '../services/prisma';
 export async function requireSetupComplete(request: FastifyRequest, reply: FastifyReply) {
   // Whitelist of routes that don't require setup to be complete
   const whitelistedPrefixes = [
-    '/api/setup-v2/',       // All setup routes
-    '/api/setup/',          // Legacy setup routes (if any)
+    '/api/setup/',          // All setup routes
     '/api/system/health',   // Health check
   ];
 
