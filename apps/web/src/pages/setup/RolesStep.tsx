@@ -272,7 +272,13 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
         permissions: rolePermissions[role.id] || defaultPermissions
       }));
 
-      // Complete setup
+      // First, configure roles (sets rolesConfigured flag)
+      await axios.post(`${API_URL}/api/setup/configure-roles`, {
+        guildId: selectedGuildId,
+        rolePermissions: rolePermsArray
+      });
+
+      // Then complete setup
       await axios.post(`${API_URL}/api/setup/complete`, {
         orgName,
         rolePermissions: rolePermsArray

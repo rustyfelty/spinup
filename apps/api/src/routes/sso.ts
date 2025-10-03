@@ -18,6 +18,7 @@ if (!SERVICE_TOKEN || SERVICE_TOKEN.length < 32) {
 }
 
 // In-memory store for OAuth states (CSRF protection only)
+// Shared between login and setup flows
 const oauthStates = new Map<string, { expiresAt: number; flow?: 'login' | 'setup' }>();
 
 // Export for use in setup routes
@@ -457,10 +458,9 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         flow: 'login' // Mark this as login flow
       });
 
-      // Use /setup-wizard as redirect (already registered in Discord)
-      // The frontend will detect login flow and handle it differently
-      const webDomain = process.env.WEB_ORIGIN || 'http://localhost:5173';
-      const redirectUri = `${webDomain}/setup-wizard`;
+      // Use unified callback route (backend handles full OAuth flow)
+      const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080';
+      const redirectUri = `${apiOrigin}/api/sso/discord/login/callback`;
 
       const { url } = discordOAuth.generateAuthUrl(state, {
         redirectUri,
@@ -477,84 +477,157 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
     }
   });
 
-  app.get("/discord/oauth/callback", async (req, reply) => {
-    const { code, state } = req.query as { code?: string; state?: string };
+  // Unified OAuth callback handler for both login and setup flows
+  app.get("/discord/login/callback", async (req, reply) => {
+    const { code, state, guild_id } = req.query as { code?: string; state?: string; guild_id?: string };
+    const webOrigin = process.env.WEB_ORIGIN || 'http://localhost:5173';
 
     if (!code || !state) {
-      return reply.redirect('/login?error=missing-params');
+      return reply.redirect(`${webOrigin}/login?error=missing-params`);
     }
 
     // Validate state
     const stateData = oauthStates.get(state);
     if (!stateData) {
-      return reply.redirect('/login?error=invalid-state');
+      return reply.redirect(`${webOrigin}/login?error=invalid-state`);
     }
 
     if (stateData.expiresAt < Date.now()) {
       oauthStates.delete(state);
-      return reply.redirect('/login?error=state-expired');
+      return reply.redirect(`${webOrigin}/login?error=state-expired`);
     }
 
-    try {
-      const webDomain = process.env.WEB_ORIGIN || 'http://localhost:5173';
-      const redirectUri = `${webDomain}/sso/discord/oauth/callback`;
+    // Check if this is a setup flow or login flow
+    const isSetupFlow = stateData.flow === 'setup';
 
-      // Exchange code for access token (with matching redirect URI)
+    try {
+      const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080';
+      const redirectUri = `${apiOrigin}/api/sso/discord/login/callback`;
+
+      // Exchange code for access token
       const tokenData = await discordOAuth.exchangeCode(code, redirectUri);
 
       // Get user info
       const discordUser = await discordOAuth.getUser(tokenData.access_token);
 
-      // Find user by Discord ID
-      let user = await prisma.user.findUnique({
-        where: { discordId: discordUser.id },
-        include: {
-          memberships: {
-            include: {
-              org: true
-            }
-          }
-        }
-      });
-
-      if (!user || user.memberships.length === 0) {
-        return reply.redirect('/login?error=no-access');
-      }
-
-      // Get first membership's org
-      const membership = user.memberships[0];
-      const org = membership.org;
-
-      // Create session JWT
-      const sessionToken = app.jwt.sign(
-        {
-          sub: user.id,
-          org: org.id
-        },
-        { expiresIn: '1d' }
-      );
-
-      // Set session cookie with secure options
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        path: '/',
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-        sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-        signed: true
-      };
-
-      reply.setCookie('spinup_sess', sessionToken, cookieOptions);
-
       // Clean up OAuth state
       oauthStates.delete(state);
 
-      // Redirect to dashboard
-      return reply.redirect(`/orgs/${org.id}/servers`);
+      if (isSetupFlow) {
+        // SETUP FLOW: Create OAuth session and redirect to setup wizard
+        const { oauthSessionManager } = await import('../services/oauth-session-manager');
+
+        // Create session using session manager
+        const session = await oauthSessionManager.createSession({
+          userId: discordUser.id,
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          expiresIn: tokenData.expires_in
+        });
+
+        app.log.info('[Setup Flow] Created OAuth session for user:', discordUser.id);
+
+        // Mark OAuth as configured in SetupState
+        // If guild_id was provided (from bot authorization), also mark guild as selected
+        const updateData: any = {
+          oauthConfigured: true
+        };
+
+        if (guild_id) {
+          updateData.guildSelected = true;
+          updateData.selectedGuildId = guild_id;
+          updateData.installerDiscordId = discordUser.id;
+        }
+
+        await prisma.setupState.upsert({
+          where: { id: 'singleton' },
+          create: {
+            id: 'singleton',
+            ...updateData
+          },
+          update: updateData
+        });
+
+        // Redirect to setup wizard with session token
+        const redirectUrl = new URL(`${webOrigin}/setup-wizard`);
+        redirectUrl.searchParams.set('sessionToken', session.sessionToken);
+        if (guild_id) {
+          redirectUrl.searchParams.set('guildId', guild_id);
+        }
+        redirectUrl.searchParams.set('userId', discordUser.id);
+        redirectUrl.searchParams.set('username', discordUser.username);
+
+        return reply.redirect(redirectUrl.toString());
+
+      } else {
+        // LOGIN FLOW: Find user and create JWT session
+        let user = await prisma.user.findUnique({
+          where: { discordId: discordUser.id },
+          include: {
+            memberships: {
+              include: {
+                org: true
+              }
+            }
+          }
+        });
+
+        if (!user || user.memberships.length === 0) {
+          return reply.redirect(`${webOrigin}/login?error=no-access`);
+        }
+
+        // Get first membership's org
+        const membership = user.memberships[0];
+        const org = membership.org;
+
+        // Create session JWT
+        const sessionToken = app.jwt.sign(
+          {
+            sub: user.id,
+            org: org.id
+          },
+          { expiresIn: '1d' }
+        );
+
+        // Set session cookie
+        const cookieOptions = {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          maxAge: 24 * 60 * 60 * 1000, // 1 day
+          sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
+          signed: true
+        };
+
+        reply.setCookie('spinup_sess', sessionToken, cookieOptions);
+
+        // Redirect to dashboard (frontend)
+        return reply.redirect(`${webOrigin}/orgs/${org.id}/servers`);
+      }
     } catch (error: any) {
       app.log.error('Discord OAuth callback error:', error);
-      return reply.redirect('/login?error=oauth-failed');
+
+      if (isSetupFlow) {
+        return reply.redirect(`${webOrigin}/setup?error=oauth-failed`);
+      } else {
+        return reply.redirect(`${webOrigin}/login?error=oauth-failed`);
+      }
     }
+  });
+
+  // Legacy callback endpoint - kept for backwards compatibility
+  // Redirects to the unified callback handler
+  app.get("/discord/oauth/callback", async (req, reply) => {
+    const { code, state } = req.query as { code?: string; state?: string };
+
+    // Redirect to the unified callback handler
+    const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080';
+    const params = new URLSearchParams();
+    if (code) params.set('code', code);
+    if (state) params.set('state', state);
+
+    const redirectUrl = `${apiOrigin}/api/sso/discord/login/callback?${params.toString()}`;
+    return reply.redirect(redirectUrl);
   });
 
   done();

@@ -179,16 +179,33 @@ export default function SetupWizard() {
   };
 
   useEffect(() => {
-    // Check if we're returning from OAuth callback (setup flow)
+    // Check if we're returning from OAuth callback (unified backend flow)
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
+    const sessionTokenParam = urlParams.get('sessionToken');
+    const userId = urlParams.get('userId');
+    const username = urlParams.get('username');
+    const guildId = urlParams.get('guildId');
 
-    if (code && state) {
-      // Stay on OAuth step (step 2) to let OAuthStep handle the callback
-      setCurrentStepIndex(2);
+    if (sessionTokenParam && userId && username) {
+      // Returning from unified OAuth callback
+      const user: DiscordUser = {
+        id: userId,
+        username: username,
+        discriminator: '0', // Discord removed discriminators
+        avatar: null
+      };
+
+      // Store session data
+      handleOAuthComplete(sessionTokenParam, user, guildId || undefined);
+
+      // Clear URL parameters while keeping current path
+      window.history.replaceState({}, '', window.location.pathname);
+
+      // Set to guild selection step if no guild, otherwise roles step
+      setCurrentStepIndex(guildId ? 4 : 3);
       setLoading(false);
     } else {
+      // Not returning from OAuth, fetch status normally
       fetchStatus();
     }
   }, []);

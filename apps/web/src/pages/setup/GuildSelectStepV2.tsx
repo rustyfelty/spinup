@@ -40,34 +40,60 @@ export default function GuildSelectStepV2({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUserGuilds();
-  }, []);
+    // Prevent double execution in strict mode
+    let isMounted = true;
+    const abortController = new AbortController();
 
-  const fetchUserGuilds = async () => {
-    setFetchingGuilds(true);
-    setError(null);
+    const fetchGuilds = async () => {
+      if (!isMounted) return;
 
-    try {
-      const response = await axios.post(`${API_URL}/api/setup/discord/guilds`, {
-        sessionToken
-      });
+      setFetchingGuilds(true);
+      setError(null);
 
-      setGuilds(response.data.guilds || []);
-    } catch (err: any) {
-      let errorMessage = err.response?.data?.message || 'Failed to fetch Discord servers';
+      try {
+        const response = await axios.post(`${API_URL}/api/setup/discord/guilds`, {
+          sessionToken
+        }, {
+          signal: abortController.signal
+        });
 
-      // Handle rate limiting with user-friendly message
-      if (err.response?.status === 429) {
-        const retryAfter = err.response?.data?.retryAfter || 60;
-        errorMessage = `Discord API rate limit reached. Please wait ${retryAfter} seconds and try again. This usually happens if you've been rapidly switching between setup steps.`;
+        if (isMounted) {
+          setGuilds(response.data.guilds || []);
+        }
+      } catch (err: any) {
+        // Ignore abort errors
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
+          return;
+        }
+
+        if (isMounted) {
+          let errorMessage = err.response?.data?.message || 'Failed to fetch Discord servers';
+
+          // Handle rate limiting with user-friendly message
+          if (err.response?.status === 429) {
+            const retryAfter = err.response?.data?.retryAfter || 60;
+            errorMessage = `Discord API rate limit reached. Please wait ${retryAfter} seconds and try again. This usually happens if you've been rapidly switching between setup steps.`;
+          }
+
+          setError(errorMessage);
+          console.error('Failed to fetch guilds:', err);
+        }
+      } finally {
+        if (isMounted) {
+          setFetchingGuilds(false);
+        }
       }
+    };
 
-      setError(errorMessage);
-      console.error('Failed to fetch guilds:', err);
-    } finally {
-      setFetchingGuilds(false);
-    }
-  };
+    fetchGuilds();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [sessionToken]);
+
 
   const handleSelectGuild = async () => {
     if (!selectedGuildId) {

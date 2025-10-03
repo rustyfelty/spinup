@@ -15,6 +15,7 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const validateUrl = (url: string): boolean => {
     try {
@@ -24,6 +25,8 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
       return false;
     }
   };
+
+  const redirectUri = apiDomain ? `${apiDomain}/api/sso/discord/login/callback` : '';
 
   const handleContinue = async () => {
     setError(null);
@@ -68,18 +71,104 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
 
   return (
     <div className="space-y-6">
+      {/* Discord Prerequisites */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="text-3xl">🎯</div>
+          <div className="flex-1">
+            <h4 className="text-lg font-bold text-blue-900 mb-2">
+              Discord Application Setup Required
+            </h4>
+            <p className="text-sm text-blue-800">
+              Before continuing, you must create and configure a Discord application.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="text-blue-600 hover:text-blue-800 text-sm font-semibold px-3 py-1 rounded hover:bg-blue-100 transition-colors"
+          >
+            {showInstructions ? 'Hide' : 'Show'}
+          </button>
+        </div>
+
+        {showInstructions && (
+          <div className="space-y-4 text-sm">
+            <div className="bg-white rounded-lg p-4 border border-blue-200">
+              <p className="font-bold text-blue-900 mb-3">📝 Step 1: Create Discord Application</p>
+              <ol className="list-decimal list-inside space-y-2 ml-2 text-gray-700">
+                <li>
+                  Go to{' '}
+                  <a
+                    href="https://discord.com/developers/applications"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline hover:text-blue-800 font-semibold"
+                  >
+                    Discord Developer Portal ↗
+                  </a>
+                </li>
+                <li>Click <strong>"New Application"</strong></li>
+                <li>Enter a name (e.g., "SpinUp") and click <strong>"Create"</strong></li>
+              </ol>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-blue-200">
+              <p className="font-bold text-blue-900 mb-3">🔗 Step 2: Configure OAuth Redirect URI</p>
+              <ol className="list-decimal list-inside space-y-2 ml-2 text-gray-700">
+                <li>In your application, go to <strong>OAuth2</strong> → <strong>General</strong></li>
+                <li>Scroll to the <strong>"Redirects"</strong> section</li>
+                <li>Click <strong>"Add Redirect"</strong></li>
+                <li>
+                  Copy and paste this URL:
+                  <div className="mt-2 p-3 bg-gray-900 text-green-400 rounded font-mono text-xs break-all flex items-center justify-between gap-2">
+                    <span>{redirectUri || 'https://your-domain.com/api/sso/discord/login/callback'}</span>
+                    {redirectUri && (
+                      <button
+                        onClick={() => navigator.clipboard.writeText(redirectUri)}
+                        className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold whitespace-nowrap"
+                        title="Copy to clipboard"
+                      >
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                </li>
+                <li>Click <strong>"Save Changes"</strong> at the bottom</li>
+              </ol>
+            </div>
+
+            <div className="bg-white rounded-lg p-4 border border-blue-200">
+              <p className="font-bold text-blue-900 mb-3">🔑 Step 3: Save Your Credentials</p>
+              <p className="text-gray-700 mb-2">You'll need these in the next step:</p>
+              <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
+                <li><strong>Client ID</strong> - found on the "General Information" page</li>
+                <li><strong>Client Secret</strong> - click "Reset Secret" on the OAuth2 page</li>
+              </ul>
+            </div>
+
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">⚠️</span>
+                <div>
+                  <p className="font-bold text-amber-900 text-xs mb-1">IMPORTANT:</p>
+                  <p className="text-xs text-amber-800">
+                    Enter your API domain below FIRST, then copy the redirect URI above.
+                    The redirect URI in Discord must <strong>exactly match</strong> what's shown above.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Domain Configuration */}
       <div>
         <h3 className="text-lg font-semibold text-gray-800 mb-2">
           Configure Domain Settings
         </h3>
         <p className="text-gray-600 mb-4">
-          Enter the public domain names where your SpinUp installation is accessible. These will be used for Discord OAuth callbacks and magic links.
-        </p>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Tip:</strong> Make sure your DNS records point to this server and SSL certificates are configured before proceeding.
+          Enter the public URLs where your SpinUp installation is accessible.
         </p>
       </div>
 
@@ -98,7 +187,7 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
             required
           />
           <p className="text-gray-500 text-xs mt-1">
-            The public URL where your web app is accessible (detected: {window.location.origin})
+            The public URL where your web app is accessible
           </p>
         </div>
 
@@ -116,9 +205,17 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
             required
           />
           <p className="text-gray-500 text-xs mt-1">
-            The public URL where your API is accessible (usually the same as web domain)
+            The public URL where your API is accessible (usually same as web domain)
           </p>
         </div>
+
+        {/* Show generated redirect URI */}
+        {redirectUri && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-xs font-semibold text-green-900 mb-1">✓ Redirect URI for Discord:</p>
+            <code className="text-xs text-green-800 break-all">{redirectUri}</code>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -126,12 +223,6 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
           <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
-
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-sm text-yellow-800">
-          <strong>Note:</strong> These settings will be used for Discord OAuth redirect URLs. You'll need to update your Discord application settings to match.
-        </p>
-      </div>
 
       <div className="flex gap-4 pt-4 border-t">
         <button

@@ -66,10 +66,14 @@ interface DiscordBotTestResponse {
 export default async function setupRoutes(fastify: FastifyInstance) {
   /**
    * GET /api/setup/status
-   * Returns current setup state and next step
+   * Returns current setup state with validation and auto-repair
    */
   fastify.get<{
-    Reply: SetupStatusResponse;
+    Reply: SetupStatusResponse & {
+      validationErrors?: string[];
+      repaired?: boolean;
+      repairs?: string[];
+    };
   }>('/status', async (request, reply) => {
     try {
       // Get or create setup state
@@ -83,7 +87,115 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Determine current step
+      // Validation and auto-repair
+      const validationErrors: string[] = [];
+      const repairs: string[] = [];
+      let repaired = false;
+
+      // Check for inconsistent state and repair
+      const isComplete = Boolean(
+        setupState.systemConfigured &&
+        setupState.oauthConfigured &&
+        setupState.guildSelected &&
+        setupState.rolesConfigured
+      );
+
+      if (isComplete) {
+        // Verify org exists if setup appears complete
+        const org = await prisma.org.findFirst();
+        if (!org) {
+          validationErrors.push('All setup steps complete but no organization exists');
+
+          // Cannot auto-repair missing org, need to re-run setup
+          await prisma.setupState.update({
+            where: { id: 'singleton' },
+            data: {
+              rolesConfigured: false
+            }
+          });
+          repairs.push('Reset rolesConfigured flag due to missing organization');
+          repaired = true;
+
+          setupState = await prisma.setupState.findUnique({
+            where: { id: 'singleton' }
+          })!;
+        }
+      }
+
+      // Check for orphaned guild selection
+      if (setupState.guildSelected && !setupState.selectedGuildId) {
+        validationErrors.push('Guild marked as selected but no guild ID stored');
+
+        // Auto-repair: Reset guild selection
+        await prisma.setupState.update({
+          where: { id: 'singleton' },
+          data: {
+            guildSelected: false,
+            rolesConfigured: false // Also reset roles since they depend on guild
+          }
+        });
+        repairs.push('Reset guild selection due to missing guild ID');
+        repaired = true;
+
+        setupState = await prisma.setupState.findUnique({
+          where: { id: 'singleton' }
+        })!;
+      }
+
+      // Check for step dependencies
+      if (setupState.rolesConfigured && !setupState.guildSelected) {
+        validationErrors.push('Roles configured but no guild selected');
+
+        // Auto-repair: Reset roles configuration
+        await prisma.setupState.update({
+          where: { id: 'singleton' },
+          data: {
+            rolesConfigured: false
+          }
+        });
+        repairs.push('Reset roles configuration due to missing guild selection');
+        repaired = true;
+
+        setupState = await prisma.setupState.findUnique({
+          where: { id: 'singleton' }
+        })!;
+      }
+
+      if (setupState.guildSelected && !setupState.oauthConfigured) {
+        validationErrors.push('Guild selected but OAuth not configured');
+
+        // Auto-repair: Reset guild and roles
+        await prisma.setupState.update({
+          where: { id: 'singleton' },
+          data: {
+            guildSelected: false,
+            rolesConfigured: false,
+            selectedGuildId: null
+          }
+        });
+        repairs.push('Reset guild selection due to missing OAuth configuration');
+        repaired = true;
+
+        setupState = await prisma.setupState.findUnique({
+          where: { id: 'singleton' }
+        })!;
+      }
+
+      // Clean up expired OAuth sessions
+      const expiredSessions = await prisma.oAuthSession.deleteMany({
+        where: {
+          expiresAt: {
+            lt: new Date()
+          }
+        }
+      });
+
+      if (expiredSessions.count > 0) {
+        repairs.push(`Cleaned up ${expiredSessions.count} expired OAuth sessions`);
+        repaired = true;
+      }
+
+      // Determine current step based on validated state
       let currentStep = 'welcome';
       if (!setupState.systemConfigured) {
         currentStep = 'system';
@@ -97,12 +209,7 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         currentStep = 'complete';
       }
 
-      const isComplete = setupState.systemConfigured &&
-        setupState.oauthConfigured &&
-        setupState.guildSelected &&
-        setupState.rolesConfigured;
-
-      return reply.status(200).send({
+      const response: any = {
         isComplete,
         currentStep,
         steps: {
@@ -113,7 +220,20 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         },
         selectedGuildId: setupState.selectedGuildId || undefined,
         installerUserId: setupState.installerUserId || undefined
-      });
+      };
+
+      // Include validation info if there were issues
+      if (validationErrors.length > 0) {
+        response.validationErrors = validationErrors;
+      }
+
+      if (repaired) {
+        response.repaired = true;
+        response.repairs = repairs;
+        fastify.log.info('Setup state auto-repaired:', repairs);
+      }
+
+      return reply.status(200).send(response);
     } catch (error: any) {
       fastify.log.error(error);
       return reply.status(500).send({
@@ -484,16 +604,25 @@ export default async function setupRoutes(fastify: FastifyInstance) {
 
   /**
    * GET /api/setup/discord/auth-url
-   * Generate Discord OAuth URL for user login
+   * Generate Discord OAuth URL for user login during setup
    */
   fastify.get('/discord/auth-url', { preHandler: preventSetupIfComplete }, async (request, reply) => {
     try {
       const state = randomBytes(32).toString('hex');
-      const { url } = discordOAuth.generateAuthUrl(state);
 
-      // Store state with 10 minute expiry
+      // Use the unified callback endpoint with setup flow marker
+      const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080';
+      const redirectUri = `${apiOrigin}/api/sso/discord/login/callback`;
+
+      const { url } = discordOAuth.generateAuthUrl(state, {
+        redirectUri,
+        includeBot: true // Include bot scope for setup flow
+      });
+
+      // Store state with flow type for the callback handler
       oauthStates.set(state, {
-        expiresAt: Date.now() + 10 * 60 * 1000
+        expiresAt: Date.now() + 10 * 60 * 1000,
+        flow: 'setup' as 'setup'
       });
 
       // Clean up expired states
@@ -515,7 +644,8 @@ export default async function setupRoutes(fastify: FastifyInstance) {
 
   /**
    * GET /api/setup/discord/callback
-   * Handle Discord OAuth callback
+   * Legacy callback endpoint - kept for backwards compatibility
+   * Redirects to the unified callback handler
    */
   fastify.get<{
     Querystring: {
@@ -526,150 +656,15 @@ export default async function setupRoutes(fastify: FastifyInstance) {
   }>('/discord/callback', async (request, reply) => {
     const { code, state, guild_id } = request.query;
 
-    if (!code || !state) {
-      return reply.status(400).send({
-        error: 'Bad Request',
-        message: 'Missing code or state parameter'
-      });
-    }
+    // Redirect to the unified callback handler
+    const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080';
+    const params = new URLSearchParams();
+    if (code) params.set('code', code);
+    if (state) params.set('state', state);
+    if (guild_id) params.set('guild_id', guild_id);
 
-    // Validate state
-    const stateData = oauthStates.get(state);
-    if (!stateData) {
-      return reply.status(400).send({
-        error: 'Bad Request',
-        message: 'Invalid or expired state token'
-      });
-    }
-
-    if (stateData.expiresAt < Date.now()) {
-      oauthStates.delete(state);
-      return reply.status(400).send({
-        error: 'Bad Request',
-        message: 'State token expired'
-      });
-    }
-
-    // Check if this is a login flow (not setup)
-    if (stateData.flow === 'login') {
-      try {
-        // Exchange code for access token
-        const tokenData = await discordOAuth.exchangeCode(code);
-
-        // Get user info
-        const discordUser = await discordOAuth.getUser(tokenData.access_token);
-
-        // Find user by Discord ID
-        let user = await prisma.user.findUnique({
-          where: { discordId: discordUser.id },
-          include: {
-            memberships: {
-              include: {
-                org: true
-              }
-            }
-          }
-        });
-
-        if (!user || user.memberships.length === 0) {
-          return reply.redirect('/login?error=no-access');
-        }
-
-        // Get first membership's org
-        const membership = user.memberships[0];
-        const org = membership.org;
-
-        // Create session JWT
-        const sessionToken = fastify.jwt.sign(
-          {
-            sub: user.id,
-            org: org.id
-          },
-          { expiresIn: '1d' }
-        );
-
-        // Set session cookie
-        const cookieOptions = {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 24 * 60 * 60 * 1000,
-          sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
-          signed: true
-        };
-
-        reply.setCookie('spinup_sess', sessionToken, cookieOptions);
-
-        // Clean up OAuth state
-        oauthStates.delete(state);
-
-        // Redirect to dashboard
-        return reply.redirect(`/orgs/${org.id}/servers`);
-      } catch (error: any) {
-        fastify.log.error('Discord OAuth login error:', error);
-        return reply.redirect('/login?error=oauth-failed');
-      }
-    }
-
-    // This is a setup flow, continue with setup logic
-    try {
-      // Exchange code for access token
-      const tokenData = await discordOAuth.exchangeCode(code);
-
-      // Get user info
-      const user = await discordOAuth.getUser(tokenData.access_token);
-
-      // Create session using session manager
-      const session = await oauthSessionManager.createSession({
-        userId: user.id,
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
-        expiresIn: tokenData.expires_in
-      });
-      console.log('[DEBUG] Created session with token:', session.sessionToken);
-
-      // Mark OAuth as configured in SetupState
-      // If guild_id was provided (from bot authorization), also mark guild as selected
-      const updateData: any = {
-        oauthConfigured: true
-      };
-
-      if (guild_id) {
-        updateData.guildSelected = true;
-        updateData.selectedGuildId = guild_id;
-        updateData.installerDiscordId = user.id;
-      }
-
-      await prisma.setupState.upsert({
-        where: { id: 'singleton' },
-        create: {
-          id: 'singleton',
-          ...updateData
-        },
-        update: updateData
-      });
-
-      // Clean up OAuth state
-      oauthStates.delete(state);
-
-      return reply.status(200).send({
-        success: true,
-        sessionToken: session.sessionToken,
-        guildId: guild_id || null,
-        user: {
-          id: user.id,
-          username: user.username,
-          discriminator: user.discriminator,
-          avatar: user.avatar
-        }
-      });
-    } catch (error: any) {
-      fastify.log.error(error);
-      return reply.status(500).send({
-        error: 'Internal Server Error',
-        message: error.message || 'Failed to complete OAuth flow'
-      });
-    }
+    const redirectUrl = `${apiOrigin}/api/sso/discord/login/callback?${params.toString()}`;
+    return reply.redirect(redirectUrl);
   });
 
   /**
@@ -994,7 +989,7 @@ export default async function setupRoutes(fastify: FastifyInstance) {
 
   /**
    * POST /api/setup/complete
-   * Finalize setup and create organization
+   * Finalize setup and create organization (IDEMPOTENT)
    */
   fastify.post<{
     Body: {
@@ -1006,7 +1001,7 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         permissions: Record<string, boolean>;
       }>;
     };
-  }>('/complete', { preHandler: preventSetupIfComplete }, async (request, reply) => {
+  }>('/complete', async (request, reply) => {
     const { orgName, rolePermissions } = request.body;
 
     if (!orgName) {
@@ -1017,14 +1012,46 @@ export default async function setupRoutes(fastify: FastifyInstance) {
     }
 
     try {
+      // Check current setup state
       const setupState = await prisma.setupState.findUnique({
         where: { id: 'singleton' }
       });
 
+      // Validate all required setup steps are complete
+      if (!setupState?.systemConfigured || !setupState?.oauthConfigured ||
+          !setupState?.guildSelected || !setupState?.rolesConfigured) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Setup steps are not complete. Please complete all steps first.'
+        });
+      }
+
       if (!setupState?.selectedGuildId) {
         return reply.status(400).send({
           error: 'Bad Request',
-          message: 'Setup not complete. Please complete all steps first.'
+          message: 'No guild selected. Please complete guild selection first.'
+        });
+      }
+
+      // Check if already completed (org already exists for this guild)
+      const existingOrg = await prisma.org.findUnique({
+        where: { discordGuildId: setupState.selectedGuildId }
+      });
+
+      if (existingOrg) {
+        // Already completed - return success idempotently
+        fastify.log.info(`Setup already completed for guild ${setupState.selectedGuildId}`);
+
+        return reply.status(200).send({
+          success: true,
+          message: 'Setup already completed for this Discord guild',
+          alreadyCompleted: true,
+          org: {
+            id: existingOrg.id,
+            name: existingOrg.name,
+            discordGuildId: existingOrg.discordGuildId,
+            discordGuildName: existingOrg.discordGuildName
+          }
         });
       }
 
@@ -1033,18 +1060,11 @@ export default async function setupRoutes(fastify: FastifyInstance) {
       // Get guild details
       const guild = await discordOAuth.getGuild(setupState.selectedGuildId, botToken);
 
-      // Delete any existing organizations (for testing - fresh start every setup)
-      const existingOrgs = await prisma.org.findMany();
-      for (const org of existingOrgs) {
-        await prisma.org.delete({ where: { id: org.id } });
-      }
-      fastify.log.info(`Deleted ${existingOrgs.length} existing organizations for fresh setup`);
-
       // Create a special "Server Owner" role with full permissions
       const ownerRolePermission = {
-        discordRoleId: 'server_owner', // Special ID for server owner
+        discordRoleId: 'server_owner',
         discordRoleName: 'Server Owner',
-        discordRoleColor: 16711680, // Red color (#FF0000)
+        discordRoleColor: 16711680,
         canCreateServer: true,
         canDeleteServer: true,
         canStartServer: true,
@@ -1065,138 +1085,147 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         canManageSettings: true
       };
 
-      // Create organization with settings and role permissions
-      const org = await prisma.org.create({
-        data: {
-          discordGuild: setupState.selectedGuildId, // Backwards compatibility
-          discordGuildId: guild.id,
-          discordGuildName: guild.name,
-          discordIconHash: guild.icon || undefined,
-          discordBannerHash: guild.banner || undefined,
-          discordDescription: guild.description || undefined,
-          discordOwnerDiscordId: setupState.installerDiscordId || undefined,
-          name: orgName,
-          settings: {
-            create: {
-              rolePermissions: {
-                create: [
-                  // Server Owner role first
-                  ownerRolePermission,
-                  // Then user-configured roles
-                  ...rolePermissions.map(rp => ({
-                  discordRoleId: rp.discordRoleId,
-                  discordRoleName: rp.discordRoleName,
-                  discordRoleColor: rp.discordRoleColor,
-                  canCreateServer: rp.permissions.canCreateServer || false,
-                  canDeleteServer: rp.permissions.canDeleteServer || false,
-                  canStartServer: rp.permissions.canStartServer || false,
-                  canStopServer: rp.permissions.canStopServer || false,
-                  canRestartServer: rp.permissions.canRestartServer || false,
-                  canEditConfig: rp.permissions.canEditConfig || false,
-                  canEditFiles: rp.permissions.canEditFiles || false,
-                  canInstallMods: rp.permissions.canInstallMods || false,
-                  canCreateBackup: rp.permissions.canCreateBackup || false,
-                  canRestoreBackup: rp.permissions.canRestoreBackup || false,
-                  canDeleteBackup: rp.permissions.canDeleteBackup || false,
-                  canViewLogs: rp.permissions.canViewLogs !== false, // Default true
-                  canViewMetrics: rp.permissions.canViewMetrics !== false, // Default true
-                  canViewConsole: rp.permissions.canViewConsole || false,
-                  canExecuteCommands: rp.permissions.canExecuteCommands || false,
-                  canManageMembers: rp.permissions.canManageMembers || false,
-                  canManageRoles: rp.permissions.canManageRoles || false,
-                  canManageSettings: rp.permissions.canManageSettings || false
-                }))]
-              }
-            }
+      // Use transaction for atomicity
+      const result = await prisma.$transaction(async (tx) => {
+        // Upsert organization (idempotent)
+        const org = await tx.org.upsert({
+          where: { discordGuildId: setupState.selectedGuildId },
+          update: {
+            discordGuildName: guild.name,
+            discordIconHash: guild.icon || undefined,
+            discordBannerHash: guild.banner || undefined,
+            discordDescription: guild.description || undefined,
+            name: orgName
+          },
+          create: {
+            discordGuild: setupState.selectedGuildId, // Backwards compatibility
+            discordGuildId: guild.id,
+            discordGuildName: guild.name,
+            discordIconHash: guild.icon || undefined,
+            discordBannerHash: guild.banner || undefined,
+            discordDescription: guild.description || undefined,
+            discordOwnerDiscordId: setupState.installerDiscordId || undefined,
+            name: orgName
           }
-        },
-        include: {
-          settings: {
-            include: {
-              rolePermissions: true
-            }
-          }
-        }
-      });
-
-      // If installer Discord ID is available, create user and membership
-      if (setupState.installerDiscordId) {
-        // Try to get Discord user info from OAuth session
-        let discordUserInfo: any = null;
-        try {
-          const oauthSession = await prisma.oAuthSession.findFirst({
-            where: { userId: setupState.installerDiscordId },
-            orderBy: { createdAt: 'desc' }
-          });
-
-          if (oauthSession?.accessToken) {
-            discordUserInfo = await discordOAuth.getUser(oauthSession.accessToken);
-            fastify.log.info('Fetched Discord user info for installer:', discordUserInfo.username);
-          }
-        } catch (err) {
-          fastify.log.warn('Failed to fetch Discord user info, using placeholder:', err);
-        }
-
-        // Check if user already exists
-        let user = await prisma.user.findUnique({
-          where: { discordId: setupState.installerDiscordId }
         });
 
-        if (!user) {
-          // Create user with Discord info if available
+        // Upsert organization settings (idempotent)
+        const settings = await tx.orgSettings.upsert({
+          where: { orgId: org.id },
+          update: {},
+          create: { orgId: org.id }
+        });
+
+        // Delete existing role permissions and recreate (simpler than complex upsert)
+        await tx.discordRolePermission.deleteMany({
+          where: { orgSettingsId: settings.id }
+        });
+
+        // Create role permissions
+        await tx.discordRolePermission.createMany({
+          data: [
+            // Server Owner role first
+            {
+              orgSettingsId: settings.id,
+              ...ownerRolePermission
+            },
+            // Then user-configured roles
+            ...rolePermissions.map(rp => ({
+              orgSettingsId: settings.id,
+              discordRoleId: rp.discordRoleId,
+              discordRoleName: rp.discordRoleName,
+              discordRoleColor: rp.discordRoleColor,
+              canCreateServer: rp.permissions.canCreateServer || false,
+              canDeleteServer: rp.permissions.canDeleteServer || false,
+              canStartServer: rp.permissions.canStartServer || false,
+              canStopServer: rp.permissions.canStopServer || false,
+              canRestartServer: rp.permissions.canRestartServer || false,
+              canEditConfig: rp.permissions.canEditConfig || false,
+              canEditFiles: rp.permissions.canEditFiles || false,
+              canInstallMods: rp.permissions.canInstallMods || false,
+              canCreateBackup: rp.permissions.canCreateBackup || false,
+              canRestoreBackup: rp.permissions.canRestoreBackup || false,
+              canDeleteBackup: rp.permissions.canDeleteBackup || false,
+              canViewLogs: rp.permissions.canViewLogs !== false,
+              canViewMetrics: rp.permissions.canViewMetrics !== false,
+              canViewConsole: rp.permissions.canViewConsole || false,
+              canExecuteCommands: rp.permissions.canExecuteCommands || false,
+              canManageMembers: rp.permissions.canManageMembers || false,
+              canManageRoles: rp.permissions.canManageRoles || false,
+              canManageSettings: rp.permissions.canManageSettings || false
+            }))
+          ]
+        });
+
+        // Handle installer user and membership if available
+        let user = null;
+        if (setupState.installerDiscordId) {
+          // Try to get Discord user info from OAuth session
+          let discordUserInfo: any = null;
+          try {
+            const oauthSession = await tx.oAuthSession.findFirst({
+              where: { userId: setupState.installerDiscordId },
+              orderBy: { createdAt: 'desc' }
+            });
+
+            if (oauthSession?.accessToken) {
+              discordUserInfo = await discordOAuth.getUser(oauthSession.accessToken);
+              fastify.log.info('Fetched Discord user info for installer:', discordUserInfo.username);
+            }
+          } catch (err) {
+            fastify.log.warn('Failed to fetch Discord user info, using placeholder:', err);
+          }
+
           const avatarUrl = discordUserInfo?.avatar
             ? `https://cdn.discordapp.com/avatars/${discordUserInfo.id}/${discordUserInfo.avatar}.png`
             : null;
 
-          user = await prisma.user.create({
-            data: {
+          // Upsert user (idempotent)
+          user = await tx.user.upsert({
+            where: { discordId: setupState.installerDiscordId },
+            update: {
+              displayName: discordUserInfo?.username || 'Installer',
+              avatarUrl
+            },
+            create: {
               discordId: setupState.installerDiscordId,
               displayName: discordUserInfo?.username || 'Installer',
-              avatarUrl,
-              memberships: {
-                create: {
-                  orgId: org.id,
-                  role: 'OWNER'
-                }
-              }
+              avatarUrl
             }
           });
-        } else {
-          // Update user with Discord info if available
-          if (discordUserInfo) {
-            const avatarUrl = discordUserInfo.avatar
-              ? `https://cdn.discordapp.com/avatars/${discordUserInfo.id}/${discordUserInfo.avatar}.png`
-              : null;
 
-            await prisma.user.update({
-              where: { id: user.id },
-              data: {
-                displayName: discordUserInfo.username,
-                avatarUrl
+          // Upsert membership (idempotent)
+          await tx.membership.upsert({
+            where: {
+              userId_orgId: {
+                userId: user.id,
+                orgId: org.id
               }
-            });
-          }
-
-          // Create membership
-          await prisma.membership.create({
-            data: {
+            },
+            update: {
+              role: 'OWNER'
+            },
+            create: {
               userId: user.id,
               orgId: org.id,
               role: 'OWNER'
             }
           });
+
+          // Update setup state with installer user ID
+          await tx.setupState.update({
+            where: { id: 'singleton' },
+            data: {
+              installerUserId: user.id
+            }
+          });
         }
 
-        // Update setup state with installer user ID and mark setup as complete
-        await prisma.setupState.update({
-          where: { id: 'singleton' },
-          data: {
-            installerUserId: user.id,
-            rolesConfigured: true
-          }
-        });
+        return { org, user };
+      });
 
-        // Automatically log in the installer user by setting JWT cookie
+      // Auto-login if we have a user
+      if (result.user) {
         const jwtSecret = process.env.API_JWT_SECRET;
         if (!jwtSecret) {
           throw new Error('API_JWT_SECRET not configured');
@@ -1204,8 +1233,8 @@ export default async function setupRoutes(fastify: FastifyInstance) {
 
         const sessionToken = fastify.jwt.sign(
           {
-            sub: user.id,
-            org: org.id
+            sub: result.user.id,
+            org: result.org.id
           },
           { expiresIn: '1d' }
         );
@@ -1214,31 +1243,23 @@ export default async function setupRoutes(fastify: FastifyInstance) {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           path: '/',
-          maxAge: 24 * 60 * 60 * 1000, // 1 day
+          maxAge: 24 * 60 * 60 * 1000,
           sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
           signed: true
         };
 
         reply.setCookie('spinup_sess', sessionToken, cookieOptions);
-        fastify.log.info(`Installer user ${user.id} automatically logged in after setup completion`);
-      } else {
-        // No installer Discord ID, just mark setup as complete
-        await prisma.setupState.update({
-          where: { id: 'singleton' },
-          data: {
-            rolesConfigured: true
-          }
-        });
+        fastify.log.info(`Installer user ${result.user.id} automatically logged in after setup completion`);
       }
 
       return reply.status(200).send({
         success: true,
         message: 'Setup completed successfully',
         org: {
-          id: org.id,
-          name: org.name,
-          discordGuildId: org.discordGuildId,
-          discordGuildName: org.discordGuildName
+          id: result.org.id,
+          name: result.org.name,
+          discordGuildId: result.org.discordGuildId,
+          discordGuildName: result.org.discordGuildName
         }
       });
     } catch (error: any) {
@@ -1289,75 +1310,211 @@ export default async function setupRoutes(fastify: FastifyInstance) {
 
   /**
    * POST /api/setup/reset
-   * Reset the entire setup and wipe organization data
-   * Requires admin authentication and server name confirmation
+   * Complete system reset with comprehensive cleanup
+   * Requires confirmation token and optional authentication
    */
   fastify.post<{
     Body: {
-      confirmationName: string;
+      confirmationToken: string;
     };
   }>('/reset', async (request, reply) => {
-    const { confirmationName } = request.body;
+    const { confirmationToken } = request.body;
 
-    if (!confirmationName) {
+    // Require confirmation token for safety
+    if (!confirmationToken) {
       return reply.status(400).send({
         error: 'Bad Request',
-        message: 'confirmationName is required'
+        message: 'Confirmation token required. Use "RESET-SYSTEM-COMPLETELY" to confirm.'
+      });
+    }
+
+    if (confirmationToken !== 'RESET-SYSTEM-COMPLETELY') {
+      return reply.status(403).send({
+        error: 'Forbidden',
+        message: 'Invalid confirmation token. Use "RESET-SYSTEM-COMPLETELY" to confirm system reset.'
       });
     }
 
     try {
-      // Get current organization
-      const org = await prisma.org.findFirst();
-
-      if (!org) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'No organization found'
-        });
-      }
-
-      // Verify the confirmation name matches the guild name
-      if (confirmationName.trim() !== org.discordGuildName?.trim()) {
-        return reply.status(400).send({
-          error: 'Bad Request',
-          message: 'Confirmation name does not match. Please type the exact server name.'
-        });
-      }
-
-      // Delete organization (cascades to settings, role permissions, memberships, servers, etc.)
-      await prisma.org.delete({
-        where: { id: org.id }
+      // Check if setup is complete (requires auth)
+      const setupState = await prisma.setupState.findUnique({
+        where: { id: 'singleton' }
       });
 
-      // Reset setup state
-      await prisma.setupState.update({
-        where: { id: 'singleton' },
-        data: {
-          systemConfigured: false,
-          oauthConfigured: false,
-          guildSelected: false,
-          rolesConfigured: false,
-          selectedGuildId: null,
-          installerUserId: null,
-          installerDiscordId: null,
-          onboardingComplete: false,
-          firstServerCreated: false
+      // If setup is complete (all steps done), require authentication
+      const isComplete = setupState &&
+        setupState.systemConfigured &&
+        setupState.oauthConfigured &&
+        setupState.guildSelected &&
+        setupState.rolesConfigured;
+
+      if (isComplete) {
+        // Check for JWT cookie authentication
+        const token = request.cookies['spinup_sess'];
+        if (!token) {
+          return reply.status(401).send({
+            error: 'Unauthorized',
+            message: 'Authentication required to reset completed system'
+          });
         }
+
+        try {
+          // Verify JWT token
+          const decoded = fastify.jwt.verify(token);
+          fastify.log.info(`System reset initiated by user: ${(decoded as any).sub}`);
+        } catch (err) {
+          return reply.status(401).send({
+            error: 'Unauthorized',
+            message: 'Invalid authentication token'
+          });
+        }
+      }
+
+      fastify.log.warn('SYSTEM RESET INITIATED - Starting comprehensive cleanup');
+
+      // Initialize cleanup counters
+      const cleanup = {
+        containersRemoved: 0,
+        containerErrors: 0,
+        filesDeleted: 0,
+        jobsDeleted: 0,
+        configVersionsDeleted: 0,
+        serversDeleted: 0,
+        membershipsDeleted: 0,
+        usersDeleted: 0,
+        rolePermissionsDeleted: 0,
+        orgSettingsDeleted: 0,
+        orgsDeleted: 0,
+        oauthSessionsDeleted: 0,
+        alreadyReset: false
+      };
+
+      // Step 1: Stop and remove all Docker containers
+      const servers = await prisma.server.findMany({
+        select: { id: true, name: true, containerId: true }
       });
 
-      // Clear all OAuth sessions
-      await prisma.oAuthSession.deleteMany({});
+      if (servers.length > 0) {
+        const { exec } = await import('child_process');
+        const { promisify } = await import('util');
+        const execAsync = promisify(exec);
+
+        for (const server of servers) {
+          if (server.containerId) {
+            try {
+              // Stop container
+              await execAsync(`docker stop ${server.containerId}`);
+              // Remove container
+              await execAsync(`docker rm ${server.containerId}`);
+              cleanup.containersRemoved++;
+              fastify.log.info(`Removed container ${server.containerId} for server ${server.name}`);
+            } catch (err) {
+              cleanup.containerErrors++;
+              fastify.log.warn(`Failed to remove container ${server.containerId}: ${err}`);
+            }
+          }
+        }
+      }
+
+      // Step 2: Delete server data directories
+      const dataDir = process.env.DATA_DIR || '/srv/spinup';
+      if (servers.length > 0) {
+        const fs = await import('fs/promises');
+        for (const server of servers) {
+          try {
+            const serverDir = `${dataDir}/${server.id}`;
+            await fs.rm(serverDir, { recursive: true, force: true });
+            cleanup.filesDeleted++;
+            fastify.log.info(`Deleted data directory for server ${server.name}`);
+          } catch (err) {
+            fastify.log.warn(`Failed to delete data directory for server ${server.id}: ${err}`);
+          }
+        }
+      }
+
+      // Step 3: Delete all database records in dependency order
+      await prisma.$transaction(async (tx) => {
+        // Delete job-related records first
+        const jobResult = await tx.job.deleteMany({});
+        cleanup.jobsDeleted = jobResult.count;
+
+        // Delete server-related records (in dependency order)
+        await tx.backup.deleteMany({});
+        await tx.customScript.deleteMany({});
+
+        const configResult = await tx.configVersion.deleteMany({});
+        cleanup.configVersionsDeleted = configResult.count;
+
+        const serverResult = await tx.server.deleteMany({});
+        cleanup.serversDeleted = serverResult.count;
+
+        // Delete user/membership records
+        const membershipResult = await tx.membership.deleteMany({});
+        cleanup.membershipsDeleted = membershipResult.count;
+
+        // Delete auth-related records
+        await tx.loginToken.deleteMany({});
+        await tx.pairingCode.deleteMany({});
+        await tx.audit.deleteMany({});
+
+        const userResult = await tx.user.deleteMany({});
+        cleanup.usersDeleted = userResult.count;
+
+        // Delete org-related records
+        const rolePermissionResult = await tx.discordRolePermission.deleteMany({});
+        cleanup.rolePermissionsDeleted = rolePermissionResult.count;
+
+        const orgSettingsResult = await tx.orgSettings.deleteMany({});
+        cleanup.orgSettingsDeleted = orgSettingsResult.count;
+
+        const orgResult = await tx.org.deleteMany({});
+        cleanup.orgsDeleted = orgResult.count;
+
+        // Delete OAuth sessions
+        const oauthResult = await tx.oAuthSession.deleteMany({});
+        cleanup.oauthSessionsDeleted = oauthResult.count;
+
+        // Reset setup state to initial values
+        await tx.setupState.upsert({
+          where: { id: 'singleton' },
+          create: {
+            id: 'singleton',
+            systemConfigured: false,
+            oauthConfigured: false,
+            botConfigured: false,
+            guildSelected: false,
+            rolesConfigured: false
+          },
+          update: {
+            systemConfigured: false,
+            oauthConfigured: false,
+            botConfigured: false,
+            guildSelected: false,
+            rolesConfigured: false,
+            selectedGuildId: null,
+            installerDiscordId: null,
+            installerUserId: null,
+            onboardingComplete: false,
+            firstServerCreated: false
+          }
+        });
+      });
+
+      // Clear the auth cookie if present
+      reply.clearCookie('spinup_sess', { path: '/' });
+
+      fastify.log.warn('SYSTEM RESET COMPLETE - All data has been wiped');
 
       return reply.status(200).send({
         success: true,
-        message: 'Setup has been reset. You can now run the setup wizard again.'
+        message: 'System reset completed successfully. All data has been removed.',
+        cleanup
       });
     } catch (error: any) {
-      fastify.log.error(error);
+      fastify.log.error('System reset failed:', error);
       return reply.status(500).send({
         error: 'Internal Server Error',
-        message: error.message || 'Failed to reset setup'
+        message: error.message || 'Failed to reset system'
       });
     }
   });

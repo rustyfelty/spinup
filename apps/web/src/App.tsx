@@ -9,6 +9,7 @@ import DiscordRoleSettings from './pages/DiscordRoleSettings'
 import Login from './pages/Login'
 import LoginCallback from './pages/LoginCallback'
 import Setup from './pages/Setup'
+import SetupGuard from './components/SetupGuard'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,8 +25,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
-          <Route path="/setup" element={<Setup />} />
-          <Route path="/setup-wizard" element={<Setup />} />
+          <Route path="/setup" element={<SetupGuard><Setup /></SetupGuard>} />
+          <Route path="/setup-wizard" element={<SetupGuard><Setup /></SetupGuard>} />
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
           <Route path="/orgs/:orgId/servers" element={<Dashboard />} />

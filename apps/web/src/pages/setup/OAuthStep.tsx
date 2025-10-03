@@ -18,64 +18,9 @@ interface OAuthStepProps extends StepProps {
 export default function OAuthStep({ onNext, onBack, onOAuthComplete }: OAuthStepProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [authInProgress, setAuthInProgress] = useState(false);
 
-  useEffect(() => {
-    // Check if we're returning from OAuth
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-
-    if (code && state) {
-      console.log('[OAuth] Processing callback with code and state');
-      handleOAuthCallback(code, state);
-    }
-  }, []);
-
-  const handleOAuthCallback = async (code: string, state: string) => {
-    console.log('[OAuth] Starting callback handler');
-    setAuthInProgress(true);
-    setError(null);
-
-    try {
-      // Extract guild_id from URL params (Discord sends this on bot authorization)
-      const urlParams = new URLSearchParams(window.location.search);
-      const guild_id = urlParams.get('guild_id');
-
-      // Build params object
-      const params: any = { code, state };
-      if (guild_id) {
-        params.guild_id = guild_id;
-      }
-
-      console.log('[OAuth] Calling API:', `${API_URL}/api/setup/discord/callback`, params);
-      const response = await axios.get(`${API_URL}/api/setup/discord/callback`, {
-        params
-      });
-
-      console.log('[OAuth] Success:', response.data);
-      const { sessionToken, user, guildId } = response.data;
-
-      // Store session token, user info, and optional guild ID in parent component
-      onOAuthComplete(sessionToken, user, guildId);
-
-      // Clean up URL
-      window.history.replaceState({}, '', window.location.pathname);
-
-      // Move to next step
-      onNext();
-    } catch (err: any) {
-      console.error('[OAuth] Error:', err);
-      console.error('[OAuth] Error response:', err.response?.data);
-
-      const errorMessage = err.response?.data?.message || 'Failed to authenticate with Discord';
-
-      // Clean up URL and show error
-      window.history.replaceState({}, '', window.location.pathname);
-      setError(errorMessage);
-      setAuthInProgress(false);
-    }
-  };
+  // OAuth callback is handled by the unified backend handler at /api/sso/discord/login/callback
+  // which redirects to /setup-wizard with session data
 
   const handleStartAuth = async () => {
     setLoading(true);
@@ -83,21 +28,13 @@ export default function OAuthStep({ onNext, onBack, onOAuthComplete }: OAuthStep
 
     try {
       const response = await axios.get(`${API_URL}/api/setup/discord/auth-url`);
+      // Redirect to Discord OAuth - backend will handle callback
       window.location.href = response.data.url;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to generate OAuth URL');
       setLoading(false);
     }
   };
-
-  if (authInProgress) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">Authenticating with Discord...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

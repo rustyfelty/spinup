@@ -11,6 +11,7 @@ export async function requireSetupComplete(request: FastifyRequest, reply: Fasti
   // Whitelist of routes that don't require setup to be complete
   const whitelistedPrefixes = [
     '/api/setup/',          // All setup routes
+    '/api/sso/',            // SSO routes (needed for OAuth during setup)
     '/api/system/health',   // Health check
   ];
 

@@ -19,7 +19,7 @@ export const systemRoutes: FastifyPluginCallback = (app, _opts, done) => {
       database: { status: "healthy", latency: 0, error: null },
       docker: { status: "healthy", containers: 0, error: null },
       redis: { status: "healthy", error: null },
-      storage: { status: "healthy", usagePercent: 0, error: null },
+      disk: { status: "healthy", usagePercent: 0, error: null },
       memory: { status: "healthy", usagePercent: 0, availableMB: 0 }
     };
 
@@ -96,20 +96,20 @@ export const systemRoutes: FastifyPluginCallback = (app, _opts, done) => {
       const dataDir = process.env.DATA_DIR || "/home/spinup-data";
       const { stdout } = await execAsync(`df -h ${dataDir} | tail -1 | awk '{print $5}'`);
       const usagePercent = parseInt(stdout.trim().replace("%", ""));
-      checks.storage.usagePercent = usagePercent;
-      checks.storage.status = usagePercent > 90 ? "down" : "healthy";
+      checks.disk.usagePercent = usagePercent;
+      checks.disk.status = usagePercent > 90 ? "down" : "healthy";
       if (usagePercent > 90) {
         status = "degraded";
       }
     } catch (error: any) {
-      checks.storage.status = "down";
-      checks.storage.error = error.message;
+      checks.disk.status = "down";
+      checks.disk.error = error.message;
     }
 
     return reply.send({
       status,
       timestamp,
-      services: checks
+      checks
     });
   });
 
@@ -194,33 +194,34 @@ export const systemRoutes: FastifyPluginCallback = (app, _opts, done) => {
         })
       );
 
+      // Calculate available resources
+      const availableMemoryMB = totalMemoryMB - allocatedMemoryMB;
+      const availableCPUShares = totalCPUShares - allocatedCPUShares;
+
       const response: any = {
-        system: {
-          totalMemoryMB,
-          usedMemoryMB,
-          freeMemoryMB,
-          cpuCount,
-          loadAverage: loadAvg
+        memory: {
+          total: totalMemoryMB,
+          used: usedMemoryMB,
+          free: freeMemoryMB,
+          allocated: allocatedMemoryMB,
+          available: availableMemoryMB
         },
-        allocated: {
-          totalMemoryMB: allocatedMemoryMB,
-          totalCPUShares: allocatedCPUShares,
-          serverCount: allServers.length
+        cpu: {
+          cores: cpuCount,
+          loadAverage: loadAvg,
+          totalShares: totalCPUShares,
+          allocatedShares: allocatedCPUShares,
+          availableShares: availableCPUShares
         },
-        serverStats
+        servers: allServers.map(s => ({
+          id: s.id,
+          name: s.name,
+          gameKey: s.gameKey,
+          status: s.status,
+          memoryCap: s.memoryCap,
+          cpuShares: s.cpuShares
+        }))
       };
-
-      // Add orgAllocation if orgId is provided
-      if (orgId) {
-        const orgServers = allServers.filter(s => s.orgId === orgId);
-        const orgMemoryUsed = orgServers.reduce((sum, s) => sum + s.memoryCap, 0);
-
-        response.orgAllocation = {
-          memoryUsedMB: orgMemoryUsed,
-          memoryLimitMB: orgMemoryUsed, // For now, limit = used (no hard limits set)
-          serverCount: orgServers.length
-        };
-      }
 
       return reply.send(response);
     } catch (error) {
