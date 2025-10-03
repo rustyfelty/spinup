@@ -4,6 +4,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { prisma } from "../services/prisma";
 import { GAMES } from "@spinup/shared";
+import { allocateHostPort } from "../services/port-allocator";
 
 const docker = new Docker(); // Uses /var/run/docker.sock by default
 const connection = {
@@ -413,59 +414,7 @@ async function pullImage(image: string): Promise<void> {
   });
 }
 
-/**
- * Allocate a host port - uses 1:1 mapping (same port on host and container)
- * This eliminates port mapping confusion for game servers
- * @param containerPort - The container port to allocate for
- * @param allocatedInJob - Ports already allocated in this job (to avoid conflicts when allocating multiple ports)
- */
-async function allocateHostPort(containerPort: number, allocatedInJob: Set<number> = new Set()): Promise<number> {
-  // Get all allocated ports from existing servers
-  const servers = await prisma.server.findMany({
-    where: {
-      ports: {
-        not: { equals: [] }
-      }
-    },
-    select: { ports: true }
-  });
-
-  const allocatedPorts = new Set<number>();
-  for (const server of servers) {
-    const ports = server.ports as any[];
-    if (Array.isArray(ports)) {
-      for (const portMapping of ports) {
-        if (portMapping && typeof portMapping.host === 'number') {
-          allocatedPorts.add(portMapping.host);
-        }
-      }
-    }
-  }
-
-  // Also include ports allocated in this job
-  for (const port of allocatedInJob) {
-    allocatedPorts.add(port);
-  }
-
-  // Use 1:1 mapping - try to allocate the same port number
-  // Range: 30000-40000 for game servers
-  const minPort = 30000;
-  const maxPort = 40000;
-
-  // Start from the container port if it's in range, otherwise start from minPort
-  let candidatePort = (containerPort >= minPort && containerPort <= maxPort)
-    ? containerPort
-    : minPort;
-
-  while (candidatePort <= maxPort) {
-    if (!allocatedPorts.has(candidatePort)) {
-      return candidatePort;
-    }
-    candidatePort++;
-  }
-
-  throw new Error(`No available ports in range ${minPort}-${maxPort}`);
-}
+// Port allocation moved to services/port-allocator.ts for better testability
 
 // Export queue for use in routes
 export { queue as serverQueue };
