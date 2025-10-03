@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { StepProps } from './SetupWizard';
+import { StepProps } from '../Setup';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -27,19 +27,33 @@ export default function OAuthStep({ onNext, onBack, onOAuthComplete }: OAuthStep
     const state = urlParams.get('state');
 
     if (code && state) {
+      console.log('[OAuth] Processing callback with code and state');
       handleOAuthCallback(code, state);
     }
   }, []);
 
   const handleOAuthCallback = async (code: string, state: string) => {
+    console.log('[OAuth] Starting callback handler');
     setAuthInProgress(true);
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/setup-v2/discord/callback`, {
-        params: { code, state }
+      // Extract guild_id from URL params (Discord sends this on bot authorization)
+      const urlParams = new URLSearchParams(window.location.search);
+      const guild_id = urlParams.get('guild_id');
+
+      // Build params object
+      const params: any = { code, state };
+      if (guild_id) {
+        params.guild_id = guild_id;
+      }
+
+      console.log('[OAuth] Calling API:', `${API_URL}/api/setup/discord/callback`, params);
+      const response = await axios.get(`${API_URL}/api/setup/discord/callback`, {
+        params
       });
 
+      console.log('[OAuth] Success:', response.data);
       const { sessionToken, user, guildId } = response.data;
 
       // Store session token, user info, and optional guild ID in parent component
@@ -51,6 +65,9 @@ export default function OAuthStep({ onNext, onBack, onOAuthComplete }: OAuthStep
       // Move to next step
       onNext();
     } catch (err: any) {
+      console.error('[OAuth] Error:', err);
+      console.error('[OAuth] Error response:', err.response?.data);
+
       const errorMessage = err.response?.data?.message || 'Failed to authenticate with Discord';
 
       // Clean up URL and show error
@@ -65,7 +82,7 @@ export default function OAuthStep({ onNext, onBack, onOAuthComplete }: OAuthStep
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/setup-v2/discord/auth-url`);
+      const response = await axios.get(`${API_URL}/api/setup/discord/auth-url`);
       window.location.href = response.data.url;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to generate OAuth URL');
@@ -108,7 +125,12 @@ export default function OAuthStep({ onNext, onBack, onOAuthComplete }: OAuthStep
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 text-sm">{error}</p>
+          <p className="text-red-700 text-sm font-semibold mb-2">{error}</p>
+          {error.includes('state') && (
+            <p className="text-red-600 text-sm">
+              This can happen if the login took too long or the server restarted. Please try logging in again.
+            </p>
+          )}
         </div>
       )}
 

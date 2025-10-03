@@ -7,43 +7,70 @@ describe('Job Queue Functions', () => {
   let testServerId: string;
 
   beforeAll(async () => {
-    // Create test organization
-    const org = await prisma.org.create({
-      data: {
-        discordGuild: 'test-guild-jobs',
-        name: 'Test Org for Jobs',
-      },
-    });
-    testOrgId = org.id;
+    // Create test organization - ensure it exists before any dependent operations
+    try {
+      const org = await prisma.org.create({
+        data: {
+          discordGuild: 'test-guild-jobs',
+          name: 'Test Org for Jobs',
+        },
+      });
+      testOrgId = org.id;
+    } catch (error) {
+      console.error('Failed to create test org:', error);
+      throw error;
+    }
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.job.deleteMany({
-      where: { server: { orgId: testOrgId } },
-    });
-    await prisma.server.deleteMany({ where: { orgId: testOrgId } });
-    await prisma.org.delete({ where: { id: testOrgId } });
+    // Clean up test data in reverse order - jobs -> servers -> org
+    try {
+      await prisma.job.deleteMany({
+        where: { server: { orgId: testOrgId } },
+      });
+      await prisma.server.deleteMany({ where: { orgId: testOrgId } });
+      await prisma.org.delete({ where: { id: testOrgId } });
+    } catch (error) {
+      console.error('Failed to clean up test data:', error);
+    }
   });
 
   beforeEach(async () => {
-    // Create fresh test server for each test
-    const server = await prisma.server.create({
-      data: {
-        orgId: testOrgId,
-        name: 'Job Test Server',
-        gameKey: 'minecraft-java',
-        status: 'STOPPED',
-        ports: [],
-        createdBy: 'test-user',
-      },
-    });
-    testServerId = server.id;
+    // Clean up any existing servers/jobs before creating fresh test server
+    try {
+      await prisma.job.deleteMany({
+        where: { server: { orgId: testOrgId } },
+      });
+      await prisma.server.deleteMany({ where: { orgId: testOrgId } });
 
-    // Clean up existing jobs
-    await prisma.job.deleteMany({
-      where: { serverId: testServerId },
-    });
+      // Create fresh test server for each test with valid orgId reference
+      const server = await prisma.server.create({
+        data: {
+          orgId: testOrgId,
+          name: 'Job Test Server',
+          gameKey: 'minecraft-java',
+          status: 'STOPPED',
+          ports: [],
+          createdBy: 'test-user',
+        },
+      });
+      testServerId = server.id;
+    } catch (error) {
+      console.error('Failed to set up test server:', error);
+      throw error;
+    }
+  });
+
+  afterEach(async () => {
+    // Clean up after each test to prevent interference
+    try {
+      await prisma.job.deleteMany({
+        where: { serverId: testServerId },
+      });
+      await prisma.server.deleteMany({ where: { id: testServerId } });
+    } catch (error) {
+      console.error('Failed to clean up after test:', error);
+    }
   });
 
   describe('enqueueCreate', () => {

@@ -21,18 +21,20 @@ model User {
 }
 
 model Org {
-  id                    String   @id @default(cuid())
-  discordGuild          String   @unique // Keep for backwards compatibility
-  discordGuildId        String?  @unique // New: proper Discord guild ID
-  discordGuildName      String?  // Guild name from Discord
-  discordIconHash       String?  // Guild icon hash
-  discordOwnerDiscordId String?  // Discord user ID of guild owner
-  name                  String
-  iconUrl               String?
-  defaultChan           String?
-  lastSyncAt            DateTime? // Last Discord sync timestamp
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  discordGuild           String   @unique // Keep for backwards compatibility
+  discordGuildId         String?  @unique // New: proper Discord guild ID
+  discordGuildName       String?  // Guild name from Discord
+  discordIconHash        String?  // Guild icon hash
+  discordBannerHash      String?  // Guild banner hash
+  discordDescription     String?  // Guild description
+  discordOwnerDiscordId  String?  // Discord user ID of guild owner
+  name                   String
+  iconUrl                String?
+  defaultChan            String?
+  lastSyncAt             DateTime? // Last Discord sync timestamp
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   memberships  Membership[]
   servers      Server[]

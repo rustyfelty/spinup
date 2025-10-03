@@ -185,3 +185,533 @@ node test-auth-flow.mjs
 2. Verify all imports are correct
 3. Check for syntax errors in JSX
 4. Ensure dev server reloaded after changes
+
+---
+
+# Project Structure & API Reference
+
+## Technology Stack
+
+### Backend (apps/api)
+- **Framework**: Fastify (Node.js)
+- **Language**: TypeScript
+- **Database**: PostgreSQL via Prisma ORM
+- **Queue**: BullMQ with Redis
+- **Container Management**: Dockerode
+- **Authentication**: JWT cookies
+
+### Frontend (apps/web)
+- **Framework**: React 18 with Vite
+- **Routing**: React Router v6
+- **State Management**: TanStack Query (React Query)
+- **HTTP Client**: Axios
+- **Styling**: Tailwind CSS
+
+### Infrastructure
+- **Reverse Proxy**: Caddy (handles HTTPS, routing)
+- **Database**: PostgreSQL 16 (Docker: void-postgres-1)
+- **Cache/Queue**: Redis (for BullMQ job queue)
+- **Container Runtime**: Docker (for game servers)
+
+## Directory Structure
+
+```
+/var/www/spinup/
+├── apps/
+│   ├── api/              # Backend API (Fastify)
+│   │   ├── src/
+│   │   │   ├── index.ts           # Main entry point
+│   │   │   ├── routes/            # API route handlers
+│   │   │   │   ├── servers.ts     # Server CRUD
+│   │   │   │   ├── files.ts       # File management
+│   │   │   │   ├── setup-v2.ts    # Setup wizard
+│   │   │   │   ├── sso.ts         # Auth/OAuth
+│   │   │   │   └── ...
+│   │   │   ├── services/          # Business logic
+│   │   │   │   ├── file-manager.ts
+│   │   │   │   ├── discord-oauth.ts
+│   │   │   │   ├── oauth-session-manager.ts
+│   │   │   │   └── prisma.ts
+│   │   │   ├── workers/           # Background jobs
+│   │   │   │   └── server.worker.ts  # Server lifecycle
+│   │   │   └── middleware/        # Auth middleware
+│   │   ├── prisma/
+│   │   │   └── schema.prisma     # Database schema
+│   │   └── __tests__/            # Test suite
+│   ├── web/              # Frontend (React + Vite)
+│   │   ├── src/
+│   │   │   ├── App.tsx           # Router configuration
+│   │   │   ├── pages/            # Page components
+│   │   │   │   ├── Dashboard.tsx
+│   │   │   │   ├── ServerDetail.tsx
+│   │   │   │   ├── Setup.tsx
+│   │   │   │   └── setup/        # Setup wizard steps
+│   │   │   ├── components/       # Reusable components
+│   │   │   └── lib/
+│   │   │       └── api.ts        # API client
+│   │   └── public/
+│   └── bot/              # Discord bot (optional)
+├── packages/
+│   └── shared/           # Shared types/constants
+├── .env                  # Environment variables
+└── clean-restart.sh      # Dev server restart script
+```
+
+## API Endpoint Reference
+
+### Base URL
+- **Development**: `http://localhost:8080`
+- **Production**: `https://daboyz.live/api`
+
+### Authentication
+All endpoints require JWT cookie authentication unless marked as public.
+
+**Cookie Name**: `spinup_sess`
+**Middleware**: `authenticate` (required), `authorizeServer` (for server-specific routes)
+
+### Servers API (`/api/servers`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/servers` | ✓ | List all servers for current org |
+| POST | `/api/servers` | ✓ | Create new server |
+| GET | `/api/servers/:id` | ✓ | Get server details |
+| PATCH | `/api/servers/:id` | ✓ | Update server config |
+| DELETE | `/api/servers/:id` | ✓ | Delete server |
+| POST | `/api/servers/:id/start` | ✓ | Start server |
+| POST | `/api/servers/:id/stop` | ✓ | Stop server |
+| POST | `/api/servers/:id/restart` | ✓ | Restart server |
+| GET | `/api/servers/:id/status` | ✓ | Get server status |
+| GET | `/api/servers/:id/logs` | ✓ | Get server logs (SSE) |
+| POST | `/api/servers/:id/command` | ✓ | Execute console command |
+
+### Files API (`/api/files`)
+
+**IMPORTANT**: All file endpoints use `/:serverId/` in the path, NOT query parameters.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/files/:serverId/list` | ✓ | List files (query: `?path=/data`) |
+| GET | `/api/files/:serverId/read` | ✓ | Read file content (query: `?path=/file.txt`) |
+| PUT | `/api/files/:serverId/edit` | ✓ | Edit file (body: `{path, content}`) |
+| DELETE | `/api/files/:serverId/delete` | ✓ | Delete file (body: `{path, confirm: true}`) |
+| DELETE | `/api/files/:serverId/delete-batch` | ✓ | Delete multiple files |
+| POST | `/api/files/:serverId/upload` | ✓ | Upload file (multipart form) |
+| GET | `/api/files/:serverId/download` | ✓ | Download file |
+| POST | `/api/files/:serverId/archive` | ✓ | Create archive |
+| POST | `/api/files/:serverId/extract` | ✓ | Extract archive |
+
+**Frontend API Client Pattern**:
+```typescript
+// CORRECT
+await api.get(`/api/files/${serverId}/list`, { params: { path: '/data' } })
+
+// INCORRECT (old pattern - don't use)
+await api.get('/api/files/list', { params: { serverId, path } })
+```
+
+### Setup Wizard API (`/api/setup`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/setup/status` | Public | Get setup completion status |
+| POST | `/api/setup/configure-domains` | Public | Configure web/API domains |
+| GET | `/api/setup/discord/auth-url` | Public | Get Discord OAuth URL |
+| GET | `/api/setup/discord/callback` | Public | OAuth callback handler |
+| POST | `/api/setup/discord/guilds` | Session | List user's Discord servers |
+| POST | `/api/setup/select-guild` | Public | Select Discord guild |
+| GET | `/api/setup/guild/:guildId/roles` | Session | Get guild roles |
+| POST | `/api/setup/configure-roles` | Public | Configure role permissions |
+| POST | `/api/setup/complete` | Public | Complete setup & create org |
+| POST | `/api/setup/reset` | ✓ | Reset setup (requires confirmation) |
+
+**Setup Flow**:
+1. Status check → 2. Configure domains → 3. Discord OAuth → 4. Select guild → 5. Configure roles → 6. Complete
+
+**Important**: Setup wizard redirects to dashboard automatically after completion (2 second delay).
+
+### Authentication API (`/api/sso`)
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/sso/dev/login` | Public | Dev-only instant login |
+| POST | `/api/sso/discord/issue` | Service | Issue magic link (bot) |
+| GET | `/api/sso/discord/consume` | Public | Consume magic link |
+| POST | `/api/sso/logout` | ✓ | Logout current user |
+
+### System API
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/system/health` | Public | Health check |
+| GET | `/api/system/info` | ✓ | System information |
+
+## Database Schema (Key Models)
+
+### Core Models
+
+**User**
+```prisma
+model User {
+  id           String   @id @default(cuid())
+  discordId    String   @unique
+  displayName  String
+  avatarUrl    String?
+  memberships  Membership[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+```
+
+**Org** (Organization = Discord Guild)
+```prisma
+model Org {
+  id                    String   @id @default(cuid())
+  discordGuildId        String?  @unique
+  discordGuildName      String?
+  name                  String
+  memberships           Membership[]
+  servers               Server[]
+  settings              OrgSettings?
+}
+```
+
+**Server**
+```prisma
+model Server {
+  id         String       @id @default(cuid())
+  orgId      String
+  name       String
+  gameKey    String       // e.g., "minecraft", "valheim"
+  status     ServerStatus @default(STOPPED)
+  ports      Json         // Port mappings
+  containerId String?     // Docker container ID
+  memoryCap  Int          @default(2048)  // MB
+  cpuShares  Int          @default(2048)
+  configs    ConfigVersion[]
+  jobs       Job[]
+}
+
+enum ServerStatus {
+  CREATING
+  RUNNING
+  STOPPED
+  ERROR
+  DELETING
+}
+```
+
+**Job** (Background Tasks)
+```prisma
+model Job {
+  id         String    @id @default(cuid())
+  serverId   String
+  type       JobType
+  status     JobStatus @default(PENDING)
+  progress   Int       @default(0)
+  logs       String    @default("")
+  error      String?
+  startedAt  DateTime?
+  finishedAt DateTime?
+}
+
+enum JobType {
+  CREATE
+  START
+  STOP
+  DELETE
+  RESTART
+}
+```
+
+**SetupState** (Setup Wizard Progress)
+```prisma
+model SetupState {
+  id                  String   @id @default("singleton")
+  systemConfigured    Boolean  @default(false)
+  oauthConfigured     Boolean  @default(false)
+  guildSelected       Boolean  @default(false)
+  rolesConfigured     Boolean  @default(false)
+  selectedGuildId     String?
+  installerUserId     String?
+}
+```
+
+### Database Access
+
+```bash
+# Via Docker
+docker exec void-postgres-1 psql -U spinup -d spinup
+
+# Common queries
+docker exec void-postgres-1 psql -U spinup -d spinup -c "SELECT * FROM \"Server\";"
+docker exec void-postgres-1 psql -U spinup -d spinup -c "SELECT * FROM \"SetupState\" WHERE id = 'singleton';"
+```
+
+## Worker System (Background Jobs)
+
+### Architecture
+- **Queue**: BullMQ with Redis
+- **Worker**: `apps/api/src/workers/server.worker.ts`
+- **Queue Name**: `server-jobs`
+- **Concurrency**: 5 jobs simultaneously
+
+### Job Types
+
+**CREATE** - Create new server
+1. Create data directory at `/srv/spinup/{serverId}/data`
+2. Pull Docker image
+3. Generate port mappings (30000-40000 range)
+4. Create Docker container with mounts and env vars
+5. Update server record with containerId and ports
+
+**START** - Start server
+1. Validate data directory exists
+2. Check container exists
+3. Start Docker container
+4. Update status to RUNNING
+
+**STOP** - Stop server
+1. Stop Docker container (15 second timeout)
+2. Update status to STOPPED
+
+**DELETE** - Delete server
+1. Stop container
+2. Remove container
+3. Delete data directory
+4. Delete database record
+
+**RESTART** - Restart server
+1. Restart Docker container (15 second timeout)
+2. Update status to RUNNING
+
+### Docker Mount Points
+
+**CRITICAL**: Server data is stored at:
+- **Root**: `/srv/spinup/` (configured via `DATA_DIR` env var)
+- **Server Path**: `/srv/spinup/{serverId}/data`
+- **Container Mount**: Mounted to game-specific path (e.g., `/data` for Minecraft)
+
+**Permissions**: Must be readable/writable by root user (worker runs as root)
+
+### Job Monitoring
+
+Jobs are tracked in the `Job` table with real-time status updates:
+- **PENDING**: Queued but not started
+- **RUNNING**: Currently executing
+- **SUCCESS**: Completed successfully
+- **FAILED**: Failed with error
+
+## Key Services
+
+### FileManager (`services/file-manager.ts`)
+Manages file operations inside Docker containers via `docker exec`.
+
+**Key Methods**:
+- `listFiles(containerId, path)` - List directory contents
+- `readFile(containerId, path)` - Read file content
+- `writeFile(containerId, path, content)` - Write file
+- `deleteFile(containerId, path)` - Delete file
+- `createDirectory(containerId, path)` - Create directory
+
+**Security**:
+- Path traversal prevention (`../` blocked)
+- MIME type validation
+- File size limits
+- Critical file protection (server.jar, etc.)
+- Malware scanning (EICAR signature detection)
+
+### DiscordOAuth (`services/discord-oauth.ts`)
+Handles Discord OAuth flow and API calls.
+
+**Features**:
+- OAuth URL generation
+- Code exchange for tokens
+- User info retrieval
+- Guild list fetching (with admin filter)
+- Rate limiting (3 second delay between calls)
+
+**Important**: Rate limiter prevents Discord API 429 errors.
+
+### OAuthSessionManager (`services/oauth-session-manager.ts`)
+Manages OAuth sessions during setup wizard.
+
+**Database-backed** (survives server restarts)
+**Session Token**: 64-character hex string (32 random bytes)
+**Expiration**: Set per Discord OAuth token expiry
+**Auto-cleanup**: Every 5 minutes
+
+**Methods**:
+- `createSession(params)` - Create new session
+- `getSession(token)` - Retrieve session (auto-deletes if expired)
+- `updateSession(token, params)` - Refresh tokens
+- `deleteSession(token)` - Manual cleanup
+
+## Frontend Architecture
+
+### Routing (`App.tsx`)
+
+```tsx
+<Routes>
+  <Route path="/setup" element={<Setup />} />
+  <Route path="/setup-wizard" element={<Setup />} />  {/* OAuth redirect */}
+  <Route path="/login" element={<Login />} />
+  <Route path="/login/callback" element={<LoginCallback />} />
+  <Route path="/" element={<Dashboard />} />
+  <Route path="/orgs/:orgId/servers" element={<Dashboard />} />
+  <Route path="/server/:id" element={<ServerDetail />} />
+  <Route path="/servers/:id" element={<ServerDetail />} />
+</Routes>
+```
+
+### API Client (`lib/api.ts`)
+
+**Base Configuration**:
+```typescript
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '',
+  withCredentials: true  // CRITICAL: Sends cookies
+})
+```
+
+**Pattern**: Export specialized API objects for each domain:
+- `serversApi` - Server CRUD and control
+- `filesApi` - File management
+- `configApi` - Configuration
+- `logsApi` - Log streaming
+
+### State Management
+
+**TanStack Query** (React Query) for server state:
+- Automatic caching
+- Background refetching
+- Optimistic updates
+- Loading/error states
+
+**Example**:
+```typescript
+const { data: servers, isLoading } = useQuery({
+  queryKey: ['servers', orgId],
+  queryFn: () => serversApi.list(orgId)
+})
+```
+
+## Recent Fixes & Known Issues
+
+### ✅ Fixed (Oct 2025)
+
+1. **Docker Mount Validation** - Added directory checks before CREATE/START jobs
+2. **Setup Wizard Redirect** - Auto-redirects to dashboard after completion (prevents OAuth errors)
+3. **OAuth Session Tests** - All 17 tests passing (async/await fixed)
+4. **Rate Limit Handling** - User-friendly error messages for Discord API 429s
+5. **File API Endpoints** - Fixed path format (`/:serverId/action` instead of query params)
+6. **Prisma Schema Mismatch** - Removed non-existent User fields (discordUsername, etc.)
+7. **Setup Import Paths** - Fixed all step components importing from correct path
+
+### Known Issues
+
+1. **Test Failures**: 15 tests still failing (mostly mock-related, don't affect production)
+2. **Orphaned Jobs**: Test jobs may error on startup (harmless, from previous test runs)
+3. **React Router Warnings**: v7 migration warnings (cosmetic, safe to ignore)
+
+### Common Gotchas
+
+1. **File API**: Always use `/:serverId/` in path, not `?serverId=` query param
+2. **Setup State**: Tokens expire after 10 minutes (increased from 2 minutes)
+3. **OAuth Errors**: If seeing OAuth errors after setup, clear sessionStorage and refresh
+4. **Port Conflicts**: Always use `./clean-restart.sh` to avoid 502 errors
+5. **Container Logs**: Old test containers may show in logs on startup (ignore)
+
+## Environment Variables
+
+**Critical Variables** (`.env`):
+```bash
+# Database
+DATABASE_URL=postgresql://spinup:spinup@localhost:5432/spinup
+
+# Auth
+API_JWT_SECRET=<32+ character secret>
+SERVICE_TOKEN=<32+ character secret>
+
+# Discord OAuth
+DISCORD_CLIENT_ID=<from Discord developer portal>
+DISCORD_CLIENT_SECRET=<from Discord developer portal>
+DISCORD_REDIRECT_URI=https://daboyz.live/setup-wizard
+
+# Server
+NODE_ENV=development
+WEB_ORIGIN=http://localhost:5173
+DATA_DIR=/srv/spinup
+
+# Redis (BullMQ)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+## Development Workflow
+
+### Starting Development
+```bash
+cd /var/www/spinup
+./clean-restart.sh
+```
+
+### Running Tests
+```bash
+cd /var/www/spinup/apps/api
+npm test                    # All tests
+npm test path/to/test.ts    # Specific test
+```
+
+### Database Management
+```bash
+# Push schema changes
+cd /var/www/spinup/apps/api
+pnpm prisma db push
+
+# Generate Prisma client
+pnpm prisma generate
+
+# View database
+docker exec void-postgres-1 psql -U spinup -d spinup
+```
+
+### Debugging
+
+**API Logs**: Check terminal running `pnpm dev`
+**Frontend Errors**: Browser DevTools Console
+**Network Requests**: Browser DevTools Network tab
+**Database Queries**: Prisma logs in API terminal (when enabled)
+
+### Quick Health Check
+```bash
+# Check servers running
+lsof -i :8080 -i :5173
+
+# Test API
+curl http://localhost:8080/api/system/health
+
+# Check Caddy
+systemctl status caddy
+
+# Check database
+docker exec void-postgres-1 pg_isready -U spinup
+```
+
+---
+
+## Summary
+
+This is a **game server hosting platform** that allows Discord communities to create and manage containerized game servers through a web UI. The backend uses Fastify + Docker + BullMQ for robust job processing, while the frontend is a modern React SPA with real-time updates via React Query.
+
+**Key Concepts**:
+- Each server runs in an isolated Docker container
+- Jobs are processed asynchronously by a worker
+- Authentication is via JWT cookies + Discord OAuth
+- Setup wizard guides initial configuration
+- File management is done via docker exec commands
+- All server control is exposed via REST API
+
+**Domain**: https://daboyz.live
+**Reverse Proxy**: Caddy (handles HTTPS, routes to dev servers)
+**Dev Ports**: Web 5173, API 8080

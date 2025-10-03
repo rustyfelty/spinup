@@ -28,14 +28,9 @@ class FileManagerService {
       throw new Error("Path traversal detected: cannot use '..' in paths");
     }
 
-    // If it's a relative path, prepend /data/
+    // Ensure it's an absolute path
     if (!normalized.startsWith("/")) {
-      return `/data/${normalized}`;
-    }
-
-    // If it's an absolute path, ensure it's within /data
-    if (!normalized.startsWith("/data/") && normalized !== "/data") {
-      throw new Error("Access denied: can only access /data directory");
+      return `/${normalized}`;
     }
 
     return normalized;
@@ -45,10 +40,87 @@ class FileManagerService {
    * List files in a container directory
    */
   async listFiles(containerId: string, dirPath: string): Promise<FileInfo[]> {
-    this.validatePath(dirPath);
-    // TODO: Fix Docker exec stream handling - currently disabled
-    // For now, return empty list to prevent 500 errors
-    return [];
+    const container = docker.getContainer(containerId);
+    const normalizedPath = this.validatePath(dirPath);
+
+    try {
+      // Use ls -la to get detailed file information
+      const exec = await container.exec({
+        Cmd: ["ls", "-la", "--time-style=iso", normalizedPath],
+        AttachStdout: true,
+        AttachStderr: true,
+      });
+
+      const stream = await exec.start({ Detach: false });
+      let output = "";
+      let errorOutput = "";
+
+      // Handle Docker stream multiplexing
+      return new Promise<FileInfo[]>((resolve, reject) => {
+        stream.on("data", (chunk: Buffer) => {
+          // Docker multiplexes stdout/stderr in the stream
+          // First byte indicates stream type: 1=stdout, 2=stderr
+          const header = chunk[0];
+          const data = chunk.slice(8).toString(); // Skip 8-byte header
+
+          if (header === 1) {
+            output += data;
+          } else if (header === 2) {
+            errorOutput += data;
+          }
+        });
+
+        stream.on("end", () => {
+          if (errorOutput && errorOutput.toLowerCase().includes("no such file")) {
+            reject(new Error(`Directory not found: ${normalizedPath}`));
+            return;
+          }
+
+          // Parse ls output
+          const files: FileInfo[] = [];
+          const lines = output.split("\n").filter(line => line.trim());
+
+          for (const line of lines) {
+            // Skip total line and current/parent dir
+            if (line.startsWith("total") || line.endsWith(" .") || line.endsWith(" ..")) {
+              continue;
+            }
+
+            // Parse ls -la output format with --time-style=iso:
+            // -rw-rw-r--  1 minecraft minecraft        2 10-02 23:14 banned-ips.json
+            const parts = line.split(/\s+/);
+            if (parts.length < 8) continue;
+
+            const permissions = parts[0];
+            const size = parseInt(parts[4], 10);
+            const date = parts[5];
+            const time = parts[6];
+            const name = parts.slice(7).join(" ");
+
+            const type = permissions.startsWith("d") ? "directory" : "file";
+            const filePath = normalizedPath === "/" ? `/${name}` : `${normalizedPath}/${name}`;
+
+            files.push({
+              name,
+              path: filePath,
+              type,
+              size: isNaN(size) ? 0 : size,
+              modified: `${date}T${time}`,
+              permissions,
+            });
+          }
+
+          resolve(files);
+        });
+
+        stream.on("error", reject);
+      });
+    } catch (error: any) {
+      if (error.statusCode === 404) {
+        throw new Error(`Container not found: ${containerId}`);
+      }
+      throw new Error(`Failed to list files: ${error.message}`);
+    }
   }
 
   /**

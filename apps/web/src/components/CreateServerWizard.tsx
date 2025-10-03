@@ -13,28 +13,17 @@ interface CreateServerWizardProps {
 interface FormData {
   game: string;
   name: string;
-  preset: string;
-  region: string;
   autoStart: boolean;
   backups: boolean;
   memoryCap: number;
   cpuShares: number;
 }
 
-const presets = [
-  { key: 'vanilla', name: 'Vanilla', description: 'Default game settings' },
-  { key: 'hardcore', name: 'Hardcore', description: 'Challenging difficulty' },
-  { key: 'creative', name: 'Creative', description: 'Building focused' },
-  { key: 'custom', name: 'Custom', description: 'Configure everything' },
-];
-
 export default function CreateServerWizard({ orgId, onClose, onSuccess }: CreateServerWizardProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     game: '',
     name: '',
-    preset: 'vanilla',
-    region: 'us-east',
     autoStart: true,
     backups: true,
     memoryCap: 2048,
@@ -111,7 +100,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Create New Server</h2>
-              <p className="text-sm text-gray-600 mt-1">Step {step} of 5</p>
+              <p className="text-sm text-gray-600 mt-1">Step {step} of 4</p>
             </div>
             <button
               onClick={onClose}
@@ -126,7 +115,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-purple-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${(step / 5) * 100}%` }}
+                style={{ width: `${(step / 4) * 100}%` }}
               />
             </div>
           </div>
@@ -180,88 +169,51 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Server Preset
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Server Options
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {presets.map((preset) => (
-                    <button
-                      key={preset.key}
-                      onClick={() => setFormData({ ...formData, preset: preset.key })}
-                      className={`p-4 rounded-xl border-2 transition-all ${
-                        formData.preset === preset.key
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="font-medium text-gray-900">{preset.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{preset.description}</div>
-                    </button>
-                  ))}
+                <div className="space-y-4">
+                  <label className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-purple-300 cursor-pointer">
+                    <div className="flex items-center space-x-3">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Auto-start on crash</div>
+                        <div className="text-xs text-gray-500">
+                          Automatically restart if the server crashes
+                        </div>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.autoStart}
+                      onChange={(e) => setFormData({ ...formData, autoStart: e.target.checked })}
+                      className="w-5 h-5 text-purple-600 rounded"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-purple-300 cursor-pointer">
+                    <div className="flex items-center space-x-3">
+                      <HardDrive className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Automatic backups</div>
+                        <div className="text-xs text-gray-500">
+                          Daily backups with 7-day retention
+                        </div>
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.backups}
+                      onChange={(e) => setFormData({ ...formData, backups: e.target.checked })}
+                      className="w-5 h-5 text-purple-600 rounded"
+                    />
+                  </label>
                 </div>
               </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Server Region
-                </label>
-                <select
-                  value={formData.region}
-                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="us-east">US East (Virginia)</option>
-                  <option value="us-west">US West (Oregon)</option>
-                  <option value="eu-west">EU West (Ireland)</option>
-                  <option value="ap-south">Asia Pacific (Singapore)</option>
-                </select>
-              </div>
-
-              <div className="space-y-4">
-                <label className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-purple-300 cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <Zap className="w-5 h-5 text-purple-600" />
-                    <div>
-                      <div className="font-medium text-gray-900">Auto-start on crash</div>
-                      <div className="text-xs text-gray-500">
-                        Automatically restart if the server crashes
-                      </div>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={formData.autoStart}
-                    onChange={(e) => setFormData({ ...formData, autoStart: e.target.checked })}
-                    className="w-5 h-5 text-purple-600 rounded"
-                  />
-                </label>
-
-                <label className="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:border-purple-300 cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <HardDrive className="w-5 h-5 text-purple-600" />
-                    <div>
-                      <div className="font-medium text-gray-900">Automatic backups</div>
-                      <div className="text-xs text-gray-500">
-                        Daily backups with 7-day retention
-                      </div>
-                    </div>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={formData.backups}
-                    onChange={(e) => setFormData({ ...formData, backups: e.target.checked })}
-                    className="w-5 h-5 text-purple-600 rounded"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4">Resource Allocation</h3>
 
@@ -393,7 +345,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
             </div>
           )}
 
-          {step === 5 && (
+          {step === 4 && (
             <div>
               <div className="text-center mb-6">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -415,14 +367,6 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Server Name</span>
                   <span className="font-medium text-gray-900">{formData.name || 'Not set'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Preset</span>
-                  <span className="font-medium text-gray-900 capitalize">{formData.preset}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Region</span>
-                  <span className="font-medium text-gray-900">{formData.region}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Auto-restart</span>
@@ -501,7 +445,7 @@ export default function CreateServerWizard({ orgId, onClose, onSuccess }: Create
             </button>
 
             <div className="flex items-center space-x-3">
-              {step === 5 ? (
+              {step === 4 ? (
                 <button
                   onClick={handleCreateServer}
                   disabled={createServerMutation.isPending}

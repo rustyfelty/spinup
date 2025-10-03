@@ -1,8 +1,12 @@
 import { FastifyPluginCallback } from "fastify";
-import { prisma } from "../services/prisma";
+import { PrismaClient } from "@prisma/client";
 import { GAMES } from "@spinup/shared";
 import { enqueueCreate, enqueueStart, enqueueStop, enqueueDelete } from "../workers/jobs";
 import { authenticate, authorizeServer, authorizeOrgAccess } from "../middleware/auth";
+
+// Workaround for Vite module transformation issue with prisma singleton
+// Create a fresh client instance instead of importing from ../services/prisma
+const prisma = new PrismaClient();
 
 interface CreateServerBody {
   orgId: string;

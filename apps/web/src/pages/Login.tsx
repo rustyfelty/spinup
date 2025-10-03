@@ -1,20 +1,23 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MessageSquare, Shield, Zap, Bot, ArrowRight, Code } from 'lucide-react'
+import { MessageSquare, Shield, Zap, Bot, ArrowRight } from 'lucide-react'
 import { api } from '../lib/api'
+
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 export default function Login() {
   const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
 
-  const handleDevLogin = async () => {
+  const handleDiscordLogin = async () => {
+    setLoading(true)
     try {
-      const { data } = await api.post('/api/sso/dev/login')
-      if (data.success) {
-        navigate(`/orgs/${data.org.id}/servers`)
-      }
+      const { data } = await api.get('/api/sso/discord/oauth/login')
+      window.location.href = data.url
     } catch (error) {
-      console.error('Dev login failed:', error)
-      alert('Dev login failed')
+      console.error('Failed to get Discord auth URL:', error)
+      alert('Failed to start Discord login')
+      setLoading(false)
     }
   }
 
@@ -31,41 +34,25 @@ export default function Login() {
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign in with Discord</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign in to SpinUp</h2>
             <p className="text-gray-600 mb-8">
-              SpinUp uses Discord for authentication. No passwords needed!
+              Log in with your Discord account to access your game servers
             </p>
 
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 mb-8">
-              <h3 className="font-semibold text-gray-900 mb-4">How it works:</h3>
-              <ol className="text-left space-y-3 max-w-md mx-auto">
-                <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full text-xs flex items-center justify-center">1</span>
-                  <span className="text-gray-700">Add the SpinUp bot to your Discord server</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full text-xs flex items-center justify-center">2</span>
-                  <span className="text-gray-700">Run any command like <code className="bg-gray-100 px-2 py-1 rounded text-sm">/gameserver list</code></span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full text-xs flex items-center justify-center">3</span>
-                  <span className="text-gray-700">The bot DMs you a secure magic link</span>
-                </li>
-                <li className="flex items-start space-x-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-purple-600 text-white rounded-full text-xs flex items-center justify-center">4</span>
-                  <span className="text-gray-700">Click the link to instantly sign in!</span>
-                </li>
-              </ol>
-            </div>
-
             <button
-              onClick={() => navigate('/integrations/discord')}
-              className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium rounded-xl hover:shadow-lg transition-all hover:scale-105"
+              onClick={handleDiscordLogin}
+              disabled={loading}
+              className="w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6"
             >
-              <Bot className="w-5 h-5" />
-              <span>Set Up Discord Integration</span>
-              <ArrowRight className="w-5 h-5" />
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+              <span>{loading ? 'Connecting to Discord...' : 'Login with Discord'}</span>
             </button>
+
+            <p className="text-sm text-gray-500">
+              By logging in, you agree to our terms of service and privacy policy
+            </p>
           </div>
 
           <div className="pt-6 border-t border-gray-200">
@@ -93,23 +80,6 @@ export default function Login() {
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-8 text-center space-y-4">
-          <p className="text-sm text-gray-600">
-            Already have the bot set up?{' '}
-            <span className="text-purple-600">
-              Run <code className="bg-gray-100 px-2 py-1 rounded">/gameserver list</code> in Discord
-            </span>
-          </p>
-
-          <button
-            onClick={handleDevLogin}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            <Code className="w-4 h-4" />
-            <span>Dev Login (Development Only)</span>
-          </button>
         </div>
       </div>
     </div>

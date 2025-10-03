@@ -5,19 +5,23 @@ import cookie from '@fastify/cookie';
 import { ssoRoutes } from '../../routes/sso';
 import { prisma } from '../../services/prisma';
 
-const JWT_SECRET = 'test-secret-key';
-const SERVICE_TOKEN = 'test-service-token';
+// Environment variables are set in setup.ts before any modules load
+const JWT_SECRET = process.env.API_JWT_SECRET!;
+const SERVICE_TOKEN = process.env.SERVICE_TOKEN!;
 
 describe('SSO Routes', () => {
   const app = Fastify();
 
   beforeAll(async () => {
-    // Set environment variables for testing
-    process.env.API_JWT_SECRET = JWT_SECRET;
-    process.env.SERVICE_TOKEN = SERVICE_TOKEN;
 
     await app.register(cookie, { secret: JWT_SECRET });
-    await app.register(jwt, { secret: JWT_SECRET });
+    await app.register(jwt, {
+      secret: JWT_SECRET,
+      cookie: {
+        cookieName: 'spinup_sess',
+        signed: true
+      }
+    });
     await app.register(ssoRoutes, { prefix: '/api/sso' });
     await app.ready();
   });

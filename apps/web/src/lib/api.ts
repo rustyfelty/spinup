@@ -8,6 +8,21 @@ export const api = axios.create({
   withCredentials: true,
 })
 
+// Global response interceptor to handle setup requirement (412 Precondition Failed)
+// Similar to how WordPress redirects to setup if not configured
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Check if the error is 412 Precondition Failed (setup required)
+    if (error.response?.status === 412 && error.response?.data?.requiresSetup) {
+      // Redirect to setup wizard
+      window.location.href = '/setup'
+      return Promise.reject(error)
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Auth API
 export const authApi = {
   async getMe() {
@@ -193,33 +208,33 @@ export interface FileInfo {
 
 export const filesApi = {
   async list(serverId: string, path: string = '/') {
-    const { data } = await api.get('/api/files/list', { params: { serverId, path } })
+    const { data } = await api.get(`/api/files/${serverId}/list`, { params: { path } })
     return data.files as FileInfo[]
   },
 
   async read(serverId: string, path: string) {
-    const { data } = await api.get('/api/files/read', { params: { serverId, path } })
+    const { data } = await api.get(`/api/files/${serverId}/read`, { params: { path } })
     return data.content as string
   },
 
   async write(serverId: string, path: string, content: string) {
-    const { data } = await api.post('/api/files/write', { serverId, path, content })
+    const { data } = await api.put(`/api/files/${serverId}/edit`, { path, content })
     return data
   },
 
   async delete(serverId: string, path: string) {
-    const { data } = await api.delete('/api/files/delete', { data: { serverId, path } })
+    const { data } = await api.delete(`/api/files/${serverId}/delete`, { data: { path, confirm: true } })
     return data
   },
 
   async createDirectory(serverId: string, path: string) {
-    const { data } = await api.post('/api/files/mkdir', { serverId, path })
+    const { data } = await api.post(`/api/files/${serverId}/mkdir`, { path })
     return data
   },
 
   async download(serverId: string, path: string) {
-    const response = await api.get('/api/files/download', {
-      params: { serverId, path },
+    const response = await api.get(`/api/files/${serverId}/download`, {
+      params: { path },
       responseType: 'blob'
     })
     const filename = path.split('/').pop() || 'download'
@@ -233,24 +248,33 @@ export const filesApi = {
     window.URL.revokeObjectURL(url)
   },
 
-  async upload(serverId: string, path: string, file: File) {
+  async upload(serverId: string, path: string, file: File, onProgress?: (progress: number) => void) {
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('serverId', serverId)
     formData.append('path', path)
-    const { data } = await api.post('/api/files/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+
+    console.log('[API] Uploading file:', { fileName: file.name, path, serverId })
+
+    const { data } = await api.post(`/api/files/${serverId}/upload`, formData, {
+      // Don't set Content-Type - let axios set it with the correct boundary
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress(percentCompleted)
+        }
+      }
     })
     return data
   },
 
   async extractZip(serverId: string, zipPath: string, extractPath?: string) {
-    const { data } = await api.post('/api/files/extract-zip', { serverId, zipPath, extractPath })
+    const { data } = await api.post(`/api/files/${serverId}/extract`, { archivePath: zipPath, destinationPath: extractPath })
     return data
   },
 
   async compressZip(serverId: string, sourcePaths: string[], zipPath: string) {
-    const { data } = await api.post('/api/files/compress-zip', { serverId, sourcePaths, zipPath })
+    const archiveName = zipPath.split('/').pop() || 'archive.zip'
+    const { data } = await api.post(`/api/files/${serverId}/archive`, { paths: sourcePaths, archiveName, compress: true })
     return data
   },
 }

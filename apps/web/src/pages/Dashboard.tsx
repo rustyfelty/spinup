@@ -11,7 +11,6 @@ import {
   Terminal,
   HardDrive,
   Activity,
-  Shield,
   AlertCircle,
   CheckCircle,
   XCircle,
@@ -21,6 +20,7 @@ import {
   Settings,
   ChevronDown,
   Copy,
+  ExternalLink,
 } from 'lucide-react';
 import { serversApi, authApi } from '../lib/api';
 import type { Server, ServerStatus } from '@spinup/shared';
@@ -28,6 +28,7 @@ import { GAMES, type GameImage } from '@spinup/shared';
 import CreateServerWizard from '../components/CreateServerWizard';
 import SystemHealthModal from '../components/SystemHealthModal';
 import CommandPalette from '../components/CommandPalette';
+import ServerBranding from '../components/ServerBranding';
 
 // Status color mappings
 const statusColors: Record<ServerStatus, string> = {
@@ -68,6 +69,17 @@ const gameIcons: Record<string, string> = {
   'starbound': '🚀',
   'vrising': '🧛',
   'custom': '🔧',
+};
+
+// Get server IP from environment
+const getServerIP = () => {
+  const webOrigin = import.meta.env.VITE_WEB_ORIGIN || window.location.origin;
+  try {
+    const url = new URL(webOrigin);
+    return url.hostname;
+  } catch {
+    return 'localhost';
+  }
 };
 
 type FilterStatus = 'all' | ServerStatus;
@@ -191,45 +203,10 @@ export default function Dashboard() {
     );
   }
 
-  // Handle auth error - show dev login option
+  // Handle auth error - redirect to login
   if (authError || !authData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl inline-flex mb-4">
-            <Gamepad2 className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to SpinUp</h1>
-          <p className="text-gray-600 mb-6">Please log in to continue</p>
-
-          <div className="space-y-3">
-            {process.env.NODE_ENV !== 'production' && (
-              <button
-                onClick={async () => {
-                  await fetch('/api/sso/dev/login', { method: 'POST', credentials: 'include' });
-                  queryClient.invalidateQueries({ queryKey: ['auth'] });
-                }}
-                className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
-              >
-                Quick Dev Login
-              </button>
-            )}
-            <button
-              onClick={() => navigate('/integrations/discord')}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Set Up Discord Login
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-6">
-            {process.env.NODE_ENV !== 'production'
-              ? 'Development mode: Use Quick Dev Login to get started immediately'
-              : 'Discord authentication is required for production'}
-          </p>
-        </div>
-      </div>
-    );
+    navigate('/login');
+    return null;
   }
 
   return (
@@ -238,7 +215,7 @@ export default function Dashboard() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40 backdrop-blur-sm bg-white/90">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-4">
               <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl">
                 <Gamepad2 className="w-6 h-6 text-white" />
               </div>
@@ -246,7 +223,10 @@ export default function Dashboard() {
                 SpinUp
               </h1>
               {authData?.org && (
-                <span className="text-sm text-gray-500 ml-2">/ {authData.org.name}</span>
+                <>
+                  <span className="text-gray-300">/</span>
+                  <ServerBranding org={authData.org} />
+                </>
               )}
             </div>
 
@@ -257,9 +237,6 @@ export default function Dashboard() {
                 title="Command Palette (⌘K)"
               >
                 <Terminal className="w-5 h-5 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Shield className="w-5 h-5 text-gray-600" />
               </button>
               <button
                 onClick={() => setShowHealthModal(true)}
@@ -282,9 +259,17 @@ export default function Dashboard() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center space-x-2 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
+                  {authData?.user?.avatarUrl ? (
+                    <img
+                      src={authData.user.avatarUrl}
+                      alt={authData.user.displayName || 'User'}
+                      className="w-8 h-8 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
                   <ChevronDown className="w-4 h-4 text-gray-600" />
                 </button>
 
@@ -297,12 +282,27 @@ export default function Dashboard() {
                     <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                       {/* User Info */}
                       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {authData?.user?.email || 'User'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {authData?.org?.name}
-                        </p>
+                        <div className="flex items-center space-x-3 mb-2">
+                          {authData?.user?.avatarUrl ? (
+                            <img
+                              src={authData.user.avatarUrl}
+                              alt={authData.user.displayName || 'User'}
+                              className="w-10 h-10 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-white" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {authData?.user?.displayName || 'User'}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {authData?.org?.name}
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Menu Items */}
@@ -544,6 +544,7 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
   const game = GAMES.find((g: GameImage) => g.key === server.gameKey);
   const gameName = game?.name || server.gameKey;
   const primaryPort = server.ports[0]?.host || '-';
+  const serverIP = getServerIP();
 
   return (
     <div
@@ -575,11 +576,11 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">IP Address</span>
                 <div className="flex items-center space-x-2">
-                  <span className="font-mono text-gray-900">localhost</span>
+                  <span className="font-mono text-gray-900">{serverIP}</span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigator.clipboard.writeText('localhost');
+                      navigator.clipboard.writeText(serverIP);
                     }}
                     className="p-1 hover:bg-gray-100 rounded transition-colors"
                     title="Copy IP"
@@ -606,20 +607,47 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
               </div>
             </div>
             <div className="flex items-center space-x-2 pt-2">
-              <a
-                href={`steam://connect/localhost:${primaryPort}`}
-                onClick={(e) => e.stopPropagation()}
-                className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm text-center"
-              >
-                Connect via Steam
-              </a>
-              <button
-                onClick={onStop}
-                disabled={isStopping}
-                className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              >
-                {isStopping ? 'Stopping...' : 'Stop'}
-              </button>
+              {game?.steamGame ? (
+                <>
+                  <a
+                    href={`steam://connect/${serverIP}:${primaryPort}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm text-center flex items-center justify-center space-x-1"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    <span>Steam</span>
+                  </a>
+                  <button
+                    onClick={onStop}
+                    disabled={isStopping}
+                    className="flex-1 px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center space-x-1"
+                  >
+                    {isStopping ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Stopping</span>
+                      </>
+                    ) : (
+                      <span>Stop</span>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={onStop}
+                  disabled={isStopping}
+                  className="w-full px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center space-x-1"
+                >
+                  {isStopping ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Stopping</span>
+                    </>
+                  ) : (
+                    <span>Stop Server</span>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -633,9 +661,16 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
             <button
               onClick={onStart}
               disabled={isStarting}
-              className="w-full px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center justify-center space-x-1"
             >
-              {isStarting ? 'Starting...' : 'Start Server'}
+              {isStarting ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Starting</span>
+                </>
+              ) : (
+                <span>Start Server</span>
+              )}
             </button>
           </div>
         )}

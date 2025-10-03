@@ -43,7 +43,9 @@ export async function authorizeServer(request: FastifyRequest, reply: FastifyRep
 
     const userId = request.user?.sub;
     const orgId = request.user?.org;
-    const serverId = (request.params as { id?: string }).id;
+    // Support both :id and :serverId parameter names
+    const serverId = (request.params as { id?: string; serverId?: string }).id ||
+                     (request.params as { id?: string; serverId?: string }).serverId;
 
     if (!userId || !orgId) {
       reply.status(401).send({
@@ -97,6 +99,11 @@ export async function authorizeServer(request: FastifyRequest, reply: FastifyRep
 }
 
 /**
+ * Alias for authenticate - used in some routes
+ */
+export const requireAuth = authenticate;
+
+/**
  * Authorization middleware - verifies user has access to create servers in org
  */
 export async function authorizeOrgAccess(request: FastifyRequest, reply: FastifyReply) {
@@ -147,5 +154,6 @@ export async function authorizeOrgAccess(request: FastifyRequest, reply: Fastify
       error: "Unauthorized",
       message: "Authentication required"
     });
+    return; // Add missing return
   }
 }

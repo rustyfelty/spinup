@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { StepProps } from './SetupWizard';
+import { StepProps } from '../Setup';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -147,7 +147,7 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/setup-v2/guild/${guildId}/roles`, {
+      const response = await axios.get(`${API_URL}/api/setup/guild/${guildId}/roles`, {
         headers: {
           Authorization: `Bearer ${sessionToken}`
         }
@@ -273,7 +273,7 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
       }));
 
       // Complete setup
-      await axios.post(`${API_URL}/api/setup-v2/complete`, {
+      await axios.post(`${API_URL}/api/setup/complete`, {
         orgName,
         rolePermissions: rolePermsArray
       });

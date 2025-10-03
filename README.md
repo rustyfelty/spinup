@@ -21,28 +21,41 @@ SpinUp lets users create, start, stop, and delete Dockerized game servers from a
 
 ## Quick Start
 
-### Prerequisites
+### Installation (WordPress-style Setup Wizard!)
 
-- Node.js 20+
-- pnpm 8+
-- Docker & Docker Compose
-- Discord Application (optional - only for Discord integration)
+SpinUp features a **web-based setup wizard** - no manual configuration needed!
 
-### Quick Setup (No Discord Required!)
-
-1. Clone and run the setup script:
+1. **Clone and install:**
 ```bash
 git clone https://github.com/yourusername/spinup.git
 cd spinup
-./setup.sh
+pnpm install
 ```
 
-2. Start the development servers:
+2. **Start the server:**
 ```bash
 pnpm dev
 ```
 
-3. Open http://localhost:5173 and click **"Quick Dev Login"** to start immediately!
+3. **Open the setup wizard:**
+Navigate to `http://localhost:8080/api/setup` and complete the form. SpinUp will:
+- ✅ Generate secure secrets automatically
+- ✅ Create your `.env` file
+- ✅ Initialize the database
+- ✅ Set up your first admin user
+
+4. **Start using SpinUp!**
+Once setup completes, you'll be redirected to the dashboard.
+
+📖 **[Full Installation Guide](./INSTALL.md)** - Detailed deployment instructions
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm 8+
+- Docker running
+- PostgreSQL 14+
+- Redis
 
 The services are available at:
 - Web Dashboard: http://localhost:5173

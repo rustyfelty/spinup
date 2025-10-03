@@ -28,6 +28,7 @@ export type GameImage = {
     playersPerGB: number;
     playersPerCore: number;
   };
+  steamGame?: boolean; // Whether this game can be connected via Steam
 };
 
 export const GAMES: GameImage[] = [
@@ -78,7 +79,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 3072, memory: 6144, description: "Medium map, 8-16 players" },
       maximum: { cpu: 4096, memory: 12288, description: "Large map, 16-32 players" }
     },
-    scaling: { playersPerGB: 2, playersPerCore: 8 }
+    scaling: { playersPerGB: 2, playersPerCore: 8 },
+    steamGame: true
   },
   {
     key: "valheim",
@@ -99,7 +101,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 2048, memory: 4096, description: "Optimal performance, 4-8 players" },
       maximum: { cpu: 4096, memory: 8192, description: "Large world, 10 players" }
     },
-    scaling: { playersPerGB: 2, playersPerCore: 5 }
+    scaling: { playersPerGB: 2, playersPerCore: 5 },
+    steamGame: true
   },
   {
     key: "factorio",
@@ -112,7 +115,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 2048, memory: 2048, description: "Medium factory, 4-10 players" },
       maximum: { cpu: 4096, memory: 8192, description: "Mega base, 10+ players" }
     },
-    scaling: { playersPerGB: 5, playersPerCore: 10 }
+    scaling: { playersPerGB: 5, playersPerCore: 10 },
+    steamGame: true
   },
   {
     key: "ark",
@@ -128,7 +132,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 4096, memory: 12288, description: "Full experience, 20-30 players" },
       maximum: { cpu: 6144, memory: 24576, description: "Large clusters, 50+ players" }
     },
-    scaling: { playersPerGB: 2, playersPerCore: 10 }
+    scaling: { playersPerGB: 2, playersPerCore: 10 },
+    steamGame: true
   },
   {
     key: "palworld",
@@ -148,7 +153,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 6144, memory: 16384, description: "Smooth gameplay, 16-32 players" },
       maximum: { cpu: 8192, memory: 32768, description: "High performance, 32+ players" }
     },
-    scaling: { playersPerGB: 2, playersPerCore: 8 }
+    scaling: { playersPerGB: 2, playersPerCore: 8 },
+    steamGame: true
   },
   {
     key: "rust",
@@ -168,7 +174,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 4096, memory: 8192, description: "Standard map, 100-150 players" },
       maximum: { cpu: 8192, memory: 16384, description: "Large map, 200+ players" }
     },
-    scaling: { playersPerGB: 18, playersPerCore: 50 }
+    scaling: { playersPerGB: 18, playersPerCore: 50 },
+    steamGame: true
   },
   {
     key: "zomboid",
@@ -184,7 +191,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 3072, memory: 4096, description: "Medium server, 8-16 players" },
       maximum: { cpu: 4096, memory: 8192, description: "Large server, 16-32 players" }
     },
-    scaling: { playersPerGB: 4, playersPerCore: 8 }
+    scaling: { playersPerGB: 4, playersPerCore: 8 },
+    steamGame: true
   },
   {
     key: "terraria",
@@ -214,7 +222,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 3072, memory: 4096, description: "Standard matches, 20 players" },
       maximum: { cpu: 4096, memory: 8192, description: "Large servers, 32+ players" }
     },
-    scaling: { playersPerGB: 5, playersPerCore: 10 }
+    scaling: { playersPerGB: 5, playersPerCore: 10 },
+    steamGame: true
   },
   {
     key: "satisfactory",
@@ -231,7 +240,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 4096, memory: 8192, description: "Medium factory, 4-8 players" },
       maximum: { cpu: 6144, memory: 16384, description: "Large factory, 8+ players" }
     },
-    scaling: { playersPerGB: 1, playersPerCore: 2 }
+    scaling: { playersPerGB: 1, playersPerCore: 2 },
+    steamGame: true
   },
   {
     key: "tf2",
@@ -251,7 +261,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 2048, memory: 2048, description: "Standard matches, 24 players" },
       maximum: { cpu: 3072, memory: 4096, description: "Large servers, 32 players" }
     },
-    scaling: { playersPerGB: 12, playersPerCore: 12 }
+    scaling: { playersPerGB: 12, playersPerCore: 12 },
+    steamGame: true
   },
   {
     key: "squad",
@@ -270,7 +281,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 6144, memory: 12288, description: "Standard matches, 60-80 players" },
       maximum: { cpu: 8192, memory: 16384, description: "Large battles, 100 players" }
     },
-    scaling: { playersPerGB: 6, playersPerCore: 20 }
+    scaling: { playersPerGB: 6, playersPerCore: 20 },
+    steamGame: true
   },
   {
     key: "mordhau",
@@ -287,7 +299,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 3072, memory: 4096, description: "Standard battles, 32-48 players" },
       maximum: { cpu: 4096, memory: 8192, description: "Large battles, 64 players" }
     },
-    scaling: { playersPerGB: 8, playersPerCore: 16 }
+    scaling: { playersPerGB: 8, playersPerCore: 16 },
+    steamGame: true
   },
   {
     key: "dst",
@@ -308,7 +321,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 1024, memory: 1024, description: "Optimal performance, 4-6 players" },
       maximum: { cpu: 2048, memory: 2048, description: "Modded servers, 6-8 players" }
     },
-    scaling: { playersPerGB: 6, playersPerCore: 6 }
+    scaling: { playersPerGB: 6, playersPerCore: 6 },
+    steamGame: true
   },
   {
     key: "starbound",
@@ -323,7 +337,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 2048, memory: 2048, description: "Standard server, 8 players" },
       maximum: { cpu: 2048, memory: 4096, description: "Large server, 12+ players" }
     },
-    scaling: { playersPerGB: 4, playersPerCore: 8 }
+    scaling: { playersPerGB: 4, playersPerCore: 8 },
+    steamGame: true
   },
   {
     key: "vrising",
@@ -345,7 +360,8 @@ export const GAMES: GameImage[] = [
       recommended: { cpu: 4096, memory: 8192, description: "Medium castle, 20-30 players" },
       maximum: { cpu: 6144, memory: 16384, description: "Large castle, 40 players" }
     },
-    scaling: { playersPerGB: 3, playersPerCore: 10 }
+    scaling: { playersPerGB: 3, playersPerCore: 10 },
+    steamGame: true
   },
   {
     key: "custom",

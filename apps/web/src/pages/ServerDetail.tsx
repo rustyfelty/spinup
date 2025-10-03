@@ -8,7 +8,19 @@ import {
 } from 'lucide-react'
 import { serversApi, configApi } from '../lib/api'
 import type { Server } from '@spinup/shared'
+import { GAMES } from '@spinup/shared'
 import FileManager from '../components/FileManager'
+
+// Get server IP from environment
+const getServerIP = () => {
+  const webOrigin = import.meta.env.VITE_WEB_ORIGIN || window.location.origin
+  try {
+    const url = new URL(webOrigin)
+    return url.hostname
+  } catch {
+    return 'localhost'
+  }
+}
 
 export default function ServerDetail() {
   const { id } = useParams<{ id: string }>()
@@ -64,12 +76,18 @@ export default function ServerDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['server', id] })
     },
+    onError: (error: any) => {
+      alert(`Failed to start server: ${error.response?.data?.message || error.message}`)
+    },
   })
 
   const stopMutation = useMutation({
     mutationFn: () => serversApi.stop(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['server', id] })
+    },
+    onError: (error: any) => {
+      alert(`Failed to stop server: ${error.response?.data?.message || error.message}`)
     },
   })
 
@@ -81,6 +99,9 @@ export default function ServerDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['server', id] })
+    },
+    onError: (error: any) => {
+      alert(`Failed to restart server: ${error.response?.data?.message || error.message}`)
     },
   })
 
@@ -166,29 +187,52 @@ export default function ServerDetail() {
             </div>
 
             <div className="flex items-center space-x-2">
+              {/* Steam Connect Link */}
+              {GAMES.find(g => g.key === server.gameKey)?.steamGame && server.status === 'RUNNING' && (
+                <a
+                  href={`steam://connect/${getServerIP()}:${(server.ports as any[])?.[0]?.host}`}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Connect via Steam</span>
+                </a>
+              )}
+
               <button
                 onClick={() => startMutation.mutate()}
-                disabled={server.status === 'RUNNING' || isActionDisabled}
+                disabled={server.status === 'RUNNING' || isActionDisabled || startMutation.isPending}
                 className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                <Play className="w-4 h-4" />
-                <span>Start</span>
+                {startMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+                <span>{startMutation.isPending ? 'Starting...' : 'Start'}</span>
               </button>
               <button
                 onClick={() => stopMutation.mutate()}
-                disabled={server.status === 'STOPPED' || isActionDisabled}
+                disabled={server.status === 'STOPPED' || isActionDisabled || stopMutation.isPending}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                <Square className="w-4 h-4" />
-                <span>Stop</span>
+                {stopMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                <span>{stopMutation.isPending ? 'Stopping...' : 'Stop'}</span>
               </button>
               <button
                 onClick={() => restartMutation.mutate()}
-                disabled={server.status !== 'RUNNING' || isActionDisabled}
+                disabled={server.status !== 'RUNNING' || isActionDisabled || restartMutation.isPending}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                <RotateCw className="w-4 h-4" />
-                <span>Restart</span>
+                {restartMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RotateCw className="w-4 h-4" />
+                )}
+                <span>{restartMutation.isPending ? 'Restarting...' : 'Restart'}</span>
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
@@ -322,17 +366,26 @@ export default function ServerDetail() {
                   <h3 className="text-lg font-medium mb-4">Connection Details</h3>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-600 mb-2">Connect to your server using:</p>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 mb-3">
                       <code className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg font-mono text-sm">
-                        localhost:{(server.ports as any[])?.[0]?.host || 'N/A'}
+                        {getServerIP()}:{(server.ports as any[])?.[0]?.host || 'N/A'}
                       </code>
                       <button
-                        onClick={() => navigator.clipboard.writeText(`localhost:${(server.ports as any[])?.[0]?.host || ''}`)}
+                        onClick={() => navigator.clipboard.writeText(`${getServerIP()}:${(server.ports as any[])?.[0]?.host || ''}`)}
                         className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
+                    {GAMES.find(g => g.key === server.gameKey)?.steamGame && (
+                      <a
+                        href={`steam://connect/${getServerIP()}:${(server.ports as any[])?.[0]?.host}`}
+                        className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Connect via Steam</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
@@ -345,7 +398,7 @@ export default function ServerDetail() {
                   Browse, edit, and manage files in your server's data directory.
                 </p>
                 {server.status === 'RUNNING' || server.status === 'STOPPED' ? (
-                  <FileManager serverId={server.id} />
+                  <FileManager serverId={server.id} gameKey={server.gameKey} />
                 ) : (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <AlertCircle className="w-5 h-5 text-yellow-600 inline mr-2" />

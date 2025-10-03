@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { StepProps } from './SetupWizard';
+import { StepProps } from '../Setup';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -43,7 +43,7 @@ export default function GuildSelectStep({ onNext, onBack, refreshStatus }: StepP
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/setup-v2/discord/callback`, {
+      const response = await axios.get(`${API_URL}/api/setup/discord/callback`, {
         params: { code, state }
       });
 
@@ -66,7 +66,7 @@ export default function GuildSelectStep({ onNext, onBack, refreshStatus }: StepP
 
   const fetchUserGuilds = async (sessionToken: string) => {
     try {
-      const response = await axios.post(`${API_URL}/api/setup-v2/discord/guilds`, {
+      const response = await axios.post(`${API_URL}/api/setup/discord/guilds`, {
         sessionToken
       });
 
@@ -83,7 +83,7 @@ export default function GuildSelectStep({ onNext, onBack, refreshStatus }: StepP
     setError(null);
 
     try {
-      const response = await axios.get(`${API_URL}/api/setup-v2/discord/auth-url`);
+      const response = await axios.get(`${API_URL}/api/setup/discord/auth-url`);
       window.location.href = response.data.url;
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to generate OAuth URL');
@@ -106,7 +106,7 @@ export default function GuildSelectStep({ onNext, onBack, refreshStatus }: StepP
     setError(null);
 
     try {
-      await axios.post(`${API_URL}/api/setup-v2/select-guild`, {
+      await axios.post(`${API_URL}/api/setup/select-guild`, {
         guildId: selectedGuildId,
         installerDiscordId: user.id
       });

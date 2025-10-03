@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import Fastify from 'fastify';
+import jwt from '@fastify/jwt';
 import { serverRoutes } from '../../routes/servers';
 import { prisma } from '../../services/prisma';
 import { GAMES } from '@spinup/shared';
@@ -8,8 +9,13 @@ describe('Server Routes', () => {
   const app = Fastify();
   let testOrgId: string;
   let testServerId: string;
+  let testToken: string;
+  const testUserId = 'test-user-servers';
 
   beforeAll(async () => {
+    // Register JWT plugin
+    await app.register(jwt, { secret: 'test-secret' });
+
     await app.register(serverRoutes, { prefix: '/api/servers' });
     await app.ready();
 
@@ -21,6 +27,9 @@ describe('Server Routes', () => {
       },
     });
     testOrgId = org.id;
+
+    // Create test token
+    testToken = app.jwt.sign({ sub: testUserId, org: testOrgId });
   });
 
   afterAll(async () => {
@@ -41,6 +50,9 @@ describe('Server Routes', () => {
         method: 'GET',
         url: '/api/servers',
         query: { orgId: testOrgId },
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -53,6 +65,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/servers',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -88,6 +103,9 @@ describe('Server Routes', () => {
         method: 'GET',
         url: '/api/servers',
         query: { orgId: testOrgId },
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -102,6 +120,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/servers',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
         payload: {
           orgId: testOrgId,
           name: 'New Minecraft Server',
@@ -128,6 +149,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/servers',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
         payload: {
           orgId: testOrgId,
           name: 'Incomplete Server',
@@ -144,6 +168,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/servers',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
         payload: {
           orgId: testOrgId,
           name: 'Invalid Game Server',
@@ -157,10 +184,13 @@ describe('Server Routes', () => {
       expect(data.message).toContain('Invalid gameKey');
     });
 
-    it('should return 404 when organization does not exist', async () => {
+    it('should return 403 when trying to create server in different org', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/servers',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
         payload: {
           orgId: 'non-existent-org-id',
           name: 'Test Server',
@@ -168,15 +198,18 @@ describe('Server Routes', () => {
         },
       });
 
-      expect(response.statusCode).toBe(404);
+      expect(response.statusCode).toBe(403);
       const data = JSON.parse(response.body);
-      expect(data.message).toContain('Organization not found');
+      expect(data.message).toContain('do not have access');
     });
 
     it('should create job for new server', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/servers',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
         payload: {
           orgId: testOrgId,
           name: 'Server with Job',
@@ -215,6 +248,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/servers/${testServerId}`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -229,6 +265,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/servers/non-existent-id',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(404);
@@ -252,6 +291,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/servers/${testServerId}`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -281,6 +323,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/servers/${testServerId}/start`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(202);
@@ -304,6 +349,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/servers/${testServerId}/start`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -320,6 +368,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/servers/${testServerId}/start`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -331,6 +382,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/servers/non-existent-id/start',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(404);
@@ -357,6 +411,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/servers/${testServerId}/stop`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(202);
@@ -379,6 +436,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/api/servers/${testServerId}/stop`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -406,6 +466,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: `/api/servers/${testServerId}`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(202);
@@ -434,6 +497,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: `/api/servers/${testServerId}`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(400);
@@ -445,6 +511,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/servers/non-existent-id',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(404);
@@ -471,6 +540,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: `/api/servers/${testServerId}/logs`,
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(200);
@@ -483,6 +555,9 @@ describe('Server Routes', () => {
       const response = await app.inject({
         method: 'GET',
         url: '/api/servers/non-existent-id/logs',
+        headers: {
+          authorization: `Bearer ${testToken}`,
+        },
       });
 
       expect(response.statusCode).toBe(404);

@@ -1,8 +1,9 @@
 import { FastifyPluginCallback } from "fastify";
 import jwt from "jsonwebtoken";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import { prisma } from "../services/prisma";
 import { magicLinkIssueSchema } from "@spinup/shared";
+import { discordOAuth } from "../services/discord-oauth";
 
 // Validate secrets at module load time
 const JWT_SECRET = process.env.API_JWT_SECRET;
@@ -15,6 +16,12 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
 if (!SERVICE_TOKEN || SERVICE_TOKEN.length < 32) {
   throw new Error("SERVICE_TOKEN must be set and at least 32 characters long");
 }
+
+// In-memory store for OAuth states (CSRF protection only)
+const oauthStates = new Map<string, { expiresAt: number; flow?: 'login' | 'setup' }>();
+
+// Export for use in setup-v2 routes
+export { oauthStates };
 
 export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
   // Issue magic link (called by Discord bot)
@@ -439,6 +446,116 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
       reply.type('text/html').send(html);
     });
   }
+
+  // Discord OAuth Login (for regular user login, not setup)
+  app.get("/discord/oauth/login", async (req, reply) => {
+    try {
+      // Generate CSRF state token with flow type encoded
+      const state = randomBytes(32).toString('hex');
+      oauthStates.set(state, {
+        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+        flow: 'login' // Mark this as login flow
+      });
+
+      // Use /setup-wizard as redirect (already registered in Discord)
+      // The frontend will detect login flow and handle it differently
+      const webDomain = process.env.WEB_ORIGIN || 'http://localhost:5173';
+      const redirectUri = `${webDomain}/setup-wizard`;
+
+      const { url } = discordOAuth.generateAuthUrl(state, {
+        redirectUri,
+        includeBot: false // Don't include bot scope for regular login
+      });
+
+      return reply.send({ url });
+    } catch (error: any) {
+      app.log.error(error);
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Failed to generate Discord OAuth URL'
+      });
+    }
+  });
+
+  app.get("/discord/oauth/callback", async (req, reply) => {
+    const { code, state } = req.query as { code?: string; state?: string };
+
+    if (!code || !state) {
+      return reply.redirect('/login?error=missing-params');
+    }
+
+    // Validate state
+    const stateData = oauthStates.get(state);
+    if (!stateData) {
+      return reply.redirect('/login?error=invalid-state');
+    }
+
+    if (stateData.expiresAt < Date.now()) {
+      oauthStates.delete(state);
+      return reply.redirect('/login?error=state-expired');
+    }
+
+    try {
+      const webDomain = process.env.WEB_ORIGIN || 'http://localhost:5173';
+      const redirectUri = `${webDomain}/sso/discord/oauth/callback`;
+
+      // Exchange code for access token (with matching redirect URI)
+      const tokenData = await discordOAuth.exchangeCode(code, redirectUri);
+
+      // Get user info
+      const discordUser = await discordOAuth.getUser(tokenData.access_token);
+
+      // Find user by Discord ID
+      let user = await prisma.user.findUnique({
+        where: { discordId: discordUser.id },
+        include: {
+          memberships: {
+            include: {
+              org: true
+            }
+          }
+        }
+      });
+
+      if (!user || user.memberships.length === 0) {
+        return reply.redirect('/login?error=no-access');
+      }
+
+      // Get first membership's org
+      const membership = user.memberships[0];
+      const org = membership.org;
+
+      // Create session JWT
+      const sessionToken = app.jwt.sign(
+        {
+          sub: user.id,
+          org: org.id
+        },
+        { expiresIn: '1d' }
+      );
+
+      // Set session cookie with secure options
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+        sameSite: (process.env.NODE_ENV === 'production' ? 'strict' : 'lax') as 'strict' | 'lax',
+        signed: true
+      };
+
+      reply.setCookie('spinup_sess', sessionToken, cookieOptions);
+
+      // Clean up OAuth state
+      oauthStates.delete(state);
+
+      // Redirect to dashboard
+      return reply.redirect(`/orgs/${org.id}/servers`);
+    } catch (error: any) {
+      app.log.error('Discord OAuth callback error:', error);
+      return reply.redirect('/login?error=oauth-failed');
+    }
+  });
 
   done();
 };

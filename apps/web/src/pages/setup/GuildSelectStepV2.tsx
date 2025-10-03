@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { StepProps } from './SetupWizard';
+import { StepProps } from '../Setup';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -48,13 +48,20 @@ export default function GuildSelectStepV2({
     setError(null);
 
     try {
-      const response = await axios.post(`${API_URL}/api/setup-v2/discord/guilds`, {
+      const response = await axios.post(`${API_URL}/api/setup/discord/guilds`, {
         sessionToken
       });
 
       setGuilds(response.data.guilds || []);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to fetch Discord servers';
+      let errorMessage = err.response?.data?.message || 'Failed to fetch Discord servers';
+
+      // Handle rate limiting with user-friendly message
+      if (err.response?.status === 429) {
+        const retryAfter = err.response?.data?.retryAfter || 60;
+        errorMessage = `Discord API rate limit reached. Please wait ${retryAfter} seconds and try again. This usually happens if you've been rapidly switching between setup steps.`;
+      }
+
       setError(errorMessage);
       console.error('Failed to fetch guilds:', err);
     } finally {
@@ -72,7 +79,7 @@ export default function GuildSelectStepV2({
     setError(null);
 
     try {
-      await axios.post(`${API_URL}/api/setup-v2/select-guild`, {
+      await axios.post(`${API_URL}/api/setup/select-guild`, {
         guildId: selectedGuildId,
         installerDiscordId: user.id
       });

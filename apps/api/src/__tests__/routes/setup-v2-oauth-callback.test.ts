@@ -34,7 +34,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     await app.close();
   });
 
-  describe('GET /api/setup-v2/discord/auth-url', () => {
+  describe('GET /api/setup/discord/auth-url (CORRECT PATH)', () => {
     it('should generate OAuth authorization URL', async () => {
       vi.mocked(discordOAuth.generateAuthUrl).mockReturnValue({
         url: 'https://discord.com/api/oauth2/authorize?client_id=123&redirect_uri=http://localhost:5173/setup-wizard&response_type=code&scope=identify%20guilds%20guilds.members.read&state=test_state_123',
@@ -43,7 +43,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/auth-url'
+        url: '/api/setup/discord/auth-url'
       });
 
       expect(response.statusCode).toBe(200);
@@ -63,7 +63,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/auth-url'
+        url: '/api/setup/discord/auth-url'
       });
 
       expect(response.statusCode).toBe(500);
@@ -73,7 +73,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     });
   });
 
-  describe('GET /api/setup-v2/discord/callback', () => {
+  describe('GET /api/setup/discord/callback (CORRECT PATH)', () => {
     it('should handle successful OAuth callback', async () => {
       // First, generate auth URL to get a valid state
       vi.mocked(discordOAuth.generateAuthUrl).mockReturnValue({
@@ -83,7 +83,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const authUrlResponse = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/auth-url'
+        url: '/api/setup/discord/auth-url'
       });
 
       const { state } = JSON.parse(authUrlResponse.body);
@@ -107,7 +107,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
       // Make callback request
       const response = await app.inject({
         method: 'GET',
-        url: `/api/setup-v2/discord/callback?code=test_code&state=${state}`
+        url: `/api/setup/discord/callback?code=test_code&state=${state}`
       });
 
       expect(response.statusCode).toBe(200);
@@ -140,7 +140,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     it('should reject callback without code parameter', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/callback?state=some_state'
+        url: '/api/setup/discord/callback?state=some_state'
       });
 
       expect(response.statusCode).toBe(400);
@@ -153,7 +153,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     it('should reject callback without state parameter', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/callback?code=test_code'
+        url: '/api/setup/discord/callback?code=test_code'
       });
 
       expect(response.statusCode).toBe(400);
@@ -166,7 +166,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     it('should reject callback with invalid state', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/callback?code=test_code&state=invalid_state'
+        url: '/api/setup/discord/callback?code=test_code&state=invalid_state'
       });
 
       expect(response.statusCode).toBe(400);
@@ -185,7 +185,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const authUrlResponse = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/auth-url'
+        url: '/api/setup/discord/auth-url'
       });
 
       const { state } = JSON.parse(authUrlResponse.body);
@@ -197,7 +197,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/api/setup-v2/discord/callback?code=invalid_code&state=${state}`
+        url: `/api/setup/discord/callback?code=invalid_code&state=${state}`
       });
 
       expect(response.statusCode).toBe(500);
@@ -216,7 +216,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const authUrlResponse = await app.inject({
         method: 'GET',
-        url: '/api/setup-v2/discord/auth-url'
+        url: '/api/setup/discord/auth-url'
       });
 
       const { state } = JSON.parse(authUrlResponse.body);
@@ -236,7 +236,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/api/setup-v2/discord/callback?code=test_code&state=${state}`
+        url: `/api/setup/discord/callback?code=test_code&state=${state}`
       });
 
       expect(response.statusCode).toBe(500);
@@ -246,7 +246,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     });
   });
 
-  describe('POST /api/setup-v2/discord/guilds', () => {
+  describe('POST /api/setup/discord/guilds (CORRECT PATH)', () => {
     it('should fetch user guilds with valid session', async () => {
       // Create a session manually
       const session = oauthSessionManager.createSession({
@@ -270,7 +270,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/api/setup-v2/discord/guilds',
+        url: '/api/setup/discord/guilds',
         payload: {
           sessionToken: session.sessionToken
         }
@@ -292,7 +292,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     it('should reject request without session token', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/api/setup-v2/discord/guilds',
+        url: '/api/setup/discord/guilds',
         payload: {}
       });
 
@@ -306,7 +306,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
     it('should reject request with invalid session token', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: '/api/setup-v2/discord/guilds',
+        url: '/api/setup/discord/guilds',
         payload: {
           sessionToken: 'invalid_token_12345'
         }
@@ -330,7 +330,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/api/setup-v2/discord/guilds',
+        url: '/api/setup/discord/guilds',
         payload: {
           sessionToken: session.sessionToken
         }
@@ -359,7 +359,7 @@ describe('Setup V2 - OAuth Callback Flow', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: '/api/setup-v2/discord/guilds',
+        url: '/api/setup/discord/guilds',
         payload: {
           sessionToken: session.sessionToken
         }

@@ -13,7 +13,13 @@ export interface User {
 
 export interface Organization {
   id: string;
+  discordGuild: string; // Keep for backwards compatibility
   discordGuildId: string;
+  discordGuildName?: string;
+  discordIconHash?: string;
+  discordBannerHash?: string;
+  discordDescription?: string;
+  discordOwnerDiscordId?: string;
   name: string;
   iconUrl?: string;
   defaultChannelId?: string;

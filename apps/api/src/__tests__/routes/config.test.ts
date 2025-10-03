@@ -12,32 +12,45 @@ describe('Config Routes', () => {
     await app.register(configRoutes, { prefix: '/api/config' });
     await app.ready();
 
-    // Create test organization
-    const org = await prisma.org.create({
-      data: {
-        discordGuild: 'test-guild-config',
-        name: 'Test Org for Config',
-      },
-    });
-    testOrgId = org.id;
+    // Create test organization - ensure it exists before any dependent operations
+    try {
+      const org = await prisma.org.create({
+        data: {
+          discordGuild: 'test-guild-config',
+          name: 'Test Org for Config',
+        },
+      });
+      testOrgId = org.id;
+    } catch (error) {
+      console.error('Failed to create test org:', error);
+      throw error;
+    }
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.configVersion.deleteMany({
-      where: { server: { orgId: testOrgId } },
-    });
-    await prisma.server.deleteMany({ where: { orgId: testOrgId } });
-    await prisma.org.delete({ where: { id: testOrgId } });
+    // Clean up test data in reverse order
+    try {
+      await prisma.configVersion.deleteMany({
+        where: { server: { orgId: testOrgId } },
+      });
+      await prisma.server.deleteMany({ where: { orgId: testOrgId } });
+      await prisma.org.delete({ where: { id: testOrgId } });
+    } catch (error) {
+      console.error('Failed to clean up test data:', error);
+    }
     await app.close();
   });
 
   beforeEach(async () => {
-    // Clean up servers and configs before each test
-    await prisma.configVersion.deleteMany({
-      where: { server: { orgId: testOrgId } },
-    });
-    await prisma.server.deleteMany({ where: { orgId: testOrgId } });
+    // Clean up servers and configs before each test (in reverse order)
+    try {
+      await prisma.configVersion.deleteMany({
+        where: { server: { orgId: testOrgId } },
+      });
+      await prisma.server.deleteMany({ where: { orgId: testOrgId } });
+    } catch (error) {
+      console.error('Failed to clean up before test:', error);
+    }
   });
 
   describe('GET /api/config/:id', () => {
@@ -53,6 +66,7 @@ describe('Config Routes', () => {
     });
 
     it('should return 501 for non-Minecraft servers', async () => {
+      // Ensure org exists before creating server
       const server = await prisma.server.create({
         data: {
           orgId: testOrgId,
@@ -103,17 +117,23 @@ describe('Config Routes', () => {
 
   describe('PUT /api/config/:id', () => {
     beforeEach(async () => {
-      const server = await prisma.server.create({
-        data: {
-          orgId: testOrgId,
-          name: 'Config Test Server',
-          gameKey: 'minecraft-java',
-          status: 'STOPPED',
-          ports: [],
-          createdBy: 'test-user',
-        },
-      });
-      testServerId = server.id;
+      // Create server with valid orgId reference
+      try {
+        const server = await prisma.server.create({
+          data: {
+            orgId: testOrgId,
+            name: 'Config Test Server',
+            gameKey: 'minecraft-java',
+            status: 'STOPPED',
+            ports: [],
+            createdBy: 'test-user',
+          },
+        });
+        testServerId = server.id;
+      } catch (error) {
+        console.error('Failed to create test server:', error);
+        throw error;
+      }
     });
 
     it('should update Minecraft server config', async () => {
@@ -268,17 +288,23 @@ describe('Config Routes', () => {
 
   describe('GET /api/config/:id/history', () => {
     beforeEach(async () => {
-      const server = await prisma.server.create({
-        data: {
-          orgId: testOrgId,
-          name: 'History Test Server',
-          gameKey: 'minecraft-java',
-          status: 'STOPPED',
-          ports: [],
-          createdBy: 'test-user',
-        },
-      });
-      testServerId = server.id;
+      // Create server with valid orgId reference
+      try {
+        const server = await prisma.server.create({
+          data: {
+            orgId: testOrgId,
+            name: 'History Test Server',
+            gameKey: 'minecraft-java',
+            status: 'STOPPED',
+            ports: [],
+            createdBy: 'test-user',
+          },
+        });
+        testServerId = server.id;
+      } catch (error) {
+        console.error('Failed to create test server:', error);
+        throw error;
+      }
     });
 
     it('should return empty array for server with no config history', async () => {

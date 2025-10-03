@@ -46,10 +46,21 @@ export function startWorker() {
         const serverPath = path.join(root, server.id);
         const dataPath = path.join(serverPath, "data");
 
+        // Validate mount points exist and are accessible
+        try {
+          await fs.mkdir(root, { recursive: true });
+          await fs.access(root, fs.constants.W_OK | fs.constants.R_OK);
+        } catch (err: any) {
+          throw new Error(`Unable to access data directory ${root}: ${err.message}. Please ensure the directory exists and has proper permissions.`);
+        }
+
         switch (job.name) {
           case "CREATE": {
             // Create data directory
             await fs.mkdir(dataPath, { recursive: true });
+
+            // Verify directory is writable
+            await fs.access(dataPath, fs.constants.W_OK | fs.constants.R_OK);
 
             // Pull Docker image
             await pullImage(game.image);
@@ -106,15 +117,19 @@ exec tail -f /dev/null
                 // Mount script into container
                 binds.push(`${scriptPath}:/startup/server_init.sh:ro`);
 
-                // Use ports from custom script
+                // Use ports from custom script - allocate sequentially to avoid conflicts
                 const portSpecs = customScript.portSpecs as any[];
-                portMappings = await Promise.all(
-                  portSpecs.map(async (p) => ({
+                portMappings = [];
+                const allocatedInThisJob = new Set<number>();
+                for (const p of portSpecs) {
+                  const hostPort = await allocateHostPort(p.container, allocatedInThisJob);
+                  allocatedInThisJob.add(hostPort);
+                  portMappings.push({
                     container: p.container,
-                    host: await allocateHostPort(p.container),
+                    host: hostPort,
                     proto: p.proto
-                  }))
-                );
+                  });
+                }
               }
 
               // Add custom environment variables (if script exists)
@@ -128,14 +143,18 @@ exec tail -f /dev/null
                 console.log(`[CUSTOM] Created custom server with script hash: ${customScript.scriptHash}`);
               }
             } else {
-              // Standard game server
-              portMappings = await Promise.all(
-                game.ports.map(async (p) => ({
+              // Standard game server - allocate ports sequentially to avoid conflicts
+              portMappings = [];
+              const allocatedInThisJob = new Set<number>();
+              for (const p of game.ports) {
+                const hostPort = await allocateHostPort(p.container, allocatedInThisJob);
+                allocatedInThisJob.add(hostPort);
+                portMappings.push({
                   container: p.container,
-                  host: await allocateHostPort(p.container),
+                  host: hostPort,
                   proto: p.proto
-                }))
-              );
+                });
+              }
             }
 
             job.updateProgress(60);
@@ -159,8 +178,7 @@ exec tail -f /dev/null
                 RestartPolicy: { Name: "unless-stopped" },
                 Memory: server.memoryCap * 1024 * 1024, // Convert MB to bytes
                 MemorySwap: server.memoryCap * 1024 * 1024, // Disable swap
-                CpuShares: server.cpuShares,
-                SecurityOpt: ["no-new-privileges:true"] // Extra security for custom servers
+                CpuShares: server.cpuShares
               },
               Env: envVars
             };
@@ -172,9 +190,19 @@ exec tail -f /dev/null
               where: { id: serverId },
               data: {
                 containerId: container.id,
-                ports: portMappings,
-                status: "STOPPED"
+                ports: portMappings
               }
+            });
+
+            job.updateProgress(80);
+
+            // Automatically start the server after creation
+            await container.start();
+
+            // Update server status to RUNNING
+            await prisma.server.update({
+              where: { id: serverId },
+              data: { status: "RUNNING" }
             });
 
             job.updateProgress(100);
@@ -186,6 +214,13 @@ exec tail -f /dev/null
               throw new Error("No container ID found");
             }
 
+            // Verify data directory still exists and is accessible
+            try {
+              await fs.access(dataPath, fs.constants.R_OK);
+            } catch (err: any) {
+              throw new Error(`Server data directory ${dataPath} is not accessible: ${err.message}`);
+            }
+
             const container = docker.getContainer(server.containerId);
 
             // Check if container exists
@@ -193,7 +228,7 @@ exec tail -f /dev/null
               await container.inspect();
             } catch (err: any) {
               if (err.statusCode === 404) {
-                throw new Error("Container not found");
+                throw new Error("Container not found. It may have been manually deleted. Try recreating the server.");
               }
               throw err;
             }
@@ -381,8 +416,10 @@ async function pullImage(image: string): Promise<void> {
 /**
  * Allocate a host port - uses 1:1 mapping (same port on host and container)
  * This eliminates port mapping confusion for game servers
+ * @param containerPort - The container port to allocate for
+ * @param allocatedInJob - Ports already allocated in this job (to avoid conflicts when allocating multiple ports)
  */
-async function allocateHostPort(containerPort: number): Promise<number> {
+async function allocateHostPort(containerPort: number, allocatedInJob: Set<number> = new Set()): Promise<number> {
   // Get all allocated ports from existing servers
   const servers = await prisma.server.findMany({
     where: {
@@ -403,6 +440,11 @@ async function allocateHostPort(containerPort: number): Promise<number> {
         }
       }
     }
+  }
+
+  // Also include ports allocated in this job
+  for (const port of allocatedInJob) {
+    allocatedPorts.add(port);
   }
 
   // Use 1:1 mapping - try to allocate the same port number

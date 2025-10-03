@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { StepProps } from './SetupWizard';
+import { StepProps } from '../Setup';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -33,7 +33,7 @@ export default function DiscordStep({ onNext, onBack, refreshStatus }: StepProps
     setError(null);
 
     try {
-      const response = await axios.post(`${API_URL}/api/setup-v2/discord/test`, {
+      const response = await axios.post(`${API_URL}/api/setup/discord/test`, {
         token: botToken
       });
 
@@ -56,7 +56,7 @@ export default function DiscordStep({ onNext, onBack, refreshStatus }: StepProps
     setError(null);
 
     try {
-      await axios.post(`${API_URL}/api/setup-v2/discord/configure`, {
+      await axios.post(`${API_URL}/api/setup/discord/configure`, {
         botToken,
         clientId,
         clientSecret

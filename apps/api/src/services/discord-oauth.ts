@@ -36,6 +36,10 @@ interface DiscordGuild {
   owner: boolean;
   permissions: string;
   features: string[];
+  banner?: string | null;
+  splash?: string | null;
+  description?: string | null;
+  owner_id?: string;
 }
 
 interface DiscordRole {
@@ -80,17 +84,27 @@ export class DiscordOAuthService {
    * Generate OAuth authorization URL with state for CSRF protection
    * Includes 'bot' scope to automatically invite the bot to the selected guild
    */
-  generateAuthUrl(state?: string): { url: string; state: string } {
+  generateAuthUrl(state?: string, options?: { redirectUri?: string; includeBot?: boolean }): { url: string; state: string } {
     const stateToken = state || randomBytes(32).toString('hex');
+    const redirectUri = options?.redirectUri || this.redirectUri;
+    const includeBot = options?.includeBot !== false; // Default to true for backwards compatibility
+
+    const scopes = includeBot
+      ? 'identify guilds guilds.members.read bot'
+      : 'identify guilds guilds.members.read';
 
     const params = new URLSearchParams({
       client_id: this.clientId,
-      redirect_uri: this.redirectUri,
+      redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'identify guilds guilds.members.read bot',
-      permissions: '8', // Administrator permission (0x8)
+      scope: scopes,
       state: stateToken
     });
+
+    // Only add permissions if including bot
+    if (includeBot) {
+      params.append('permissions', '8'); // Administrator permission (0x8)
+    }
 
     return {
       url: `https://discord.com/api/oauth2/authorize?${params.toString()}`,
@@ -101,7 +115,7 @@ export class DiscordOAuthService {
   /**
    * Exchange OAuth code for access token
    */
-  async exchangeCode(code: string): Promise<OAuthTokenResponse> {
+  async exchangeCode(code: string, redirectUri?: string): Promise<OAuthTokenResponse> {
     await rateLimiter.waitIfNeeded();
 
     try {
@@ -112,7 +126,7 @@ export class DiscordOAuthService {
           client_secret: this.clientSecret,
           grant_type: 'authorization_code',
           code,
-          redirect_uri: this.redirectUri
+          redirect_uri: redirectUri || this.redirectUri
         }).toString(),
         {
           headers: {

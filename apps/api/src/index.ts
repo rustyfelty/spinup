@@ -9,9 +9,30 @@ import { ssoRoutes } from "./routes/sso";
 import { configRoutes } from "./routes/config";
 import { systemRoutes } from "./routes/system";
 import { aiRoutes } from "./routes/ai";
-import { fileRoutes } from "./routes/files";
+import { filesRoutes } from "./routes/files";
 import settingsRoutes from "./routes/settings";
+import { setupRoutes } from "./routes/setup";
+import setupV2Routes from "./routes/setup-v2";
+import { authRoutes } from "./routes/auth";
+import orgDiscordRoutes from "./routes/org-discord";
 import { startWorker } from "./workers/server.worker";
+import { requireSetupComplete } from "./middleware/require-setup";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+
+// Check if system is configured
+function isSystemConfigured(): boolean {
+  const envPath = join(process.cwd(), "../../.env");
+  if (!existsSync(envPath)) return false;
+
+  const envContent = readFileSync(envPath, "utf-8");
+  const hasJwtSecret = envContent.includes("API_JWT_SECRET=") &&
+    envContent.match(/API_JWT_SECRET=([^\n]+)/)?.[1]?.length >= 32;
+  const hasServiceToken = envContent.includes("SERVICE_TOKEN=") &&
+    envContent.match(/SERVICE_TOKEN=([^\n]+)/)?.[1]?.length >= 32;
+
+  return !!(hasJwtSecret && hasServiceToken);
+}
 
 const app = Fastify({
   logger: {
@@ -28,17 +49,47 @@ const app = Fastify({
 
 async function start() {
   try {
-    // Register plugins
+    const systemConfigured = isSystemConfigured();
+
+    // Register CORS first
     await app.register(cors, {
       origin: [
         process.env.WEB_ORIGIN || "http://localhost:5173",
+        "http://localhost:5173",
         "http://localhost:5174", // Alternative port if 5173 is in use
-        "http://localhost:5175"  // Another fallback
+        "http://localhost:5175", // Another fallback
+        "https://daboyz.live",   // Production frontend
+        "http://daboyz.live"     // Production frontend (http)
       ],
       credentials: true
     });
 
-    // Validate JWT secret is configured
+    // If not configured, only register setup routes
+    if (!systemConfigured) {
+      app.log.warn("System not configured - setup wizard mode activated");
+
+      // Register both setup routes (old and new)
+      await app.register(setupRoutes, { prefix: "/api/setup" });
+      await app.register(setupV2Routes, { prefix: "/api/setup" });
+
+      // Health check
+      app.get("/health", async () => ({ status: "setup_required" }));
+
+      // Redirect all other requests to setup
+      app.setNotFoundHandler((req, reply) => {
+        if (req.url.startsWith("/api/setup")) {
+          return reply.code(404).send({ error: "Not found" });
+        }
+        return reply.redirect("/api/setup");
+      });
+
+      const port = Number(process.env.API_PORT || 8080);
+      await app.listen({ port, host: "0.0.0.0" });
+      console.log(`\n🔧 SpinUp Setup Mode - Visit http://localhost:${port}/api/setup to configure\n`);
+      return;
+    }
+
+    // System is configured - proceed with normal startup
     const jwtSecret = process.env.API_JWT_SECRET;
     if (!jwtSecret || jwtSecret.length < 32) {
       throw new Error("API_JWT_SECRET must be set and at least 32 characters long");
@@ -95,17 +146,51 @@ async function start() {
       });
     });
 
+    // Global hook to enforce setup completion before allowing API access
+    // This runs on every request (similar to WordPress setup check)
+    app.addHook('onRequest', requireSetupComplete);
+
     // Health check
     app.get("/health", async () => ({ status: "ok" }));
 
     // Register routes
     await app.register(ssoRoutes, { prefix: "/api/sso" });
+    await app.register(authRoutes, { prefix: "/api/auth" });
     await app.register(serverRoutes, { prefix: "/api/servers" });
     await app.register(configRoutes, { prefix: "/api/config" });
     await app.register(systemRoutes, { prefix: "/api/system" });
     await app.register(aiRoutes, { prefix: "/api/ai" });
-    await app.register(fileRoutes, { prefix: "/api/files" });
+    await app.register(filesRoutes, { prefix: "/api/files" });
     await app.register(settingsRoutes, { prefix: "/api/settings" });
+    await app.register(setupV2Routes, { prefix: "/api/setup" });
+    await app.register(orgDiscordRoutes, { prefix: "/api/org" });
+
+    // Root-level route for Discord OAuth callback
+    // Discord redirects here, and we handle it server-side
+    app.get('/setup-wizard', async (request, reply) => {
+      const { code, state, guild_id } = request.query as { code?: string; state?: string; guild_id?: string };
+
+      if (code && state) {
+        // Import oauthStates to check flow type
+        const { oauthStates } = await import('./routes/sso');
+        const stateData = oauthStates.get(state);
+
+        // If this is a login flow, handle it via unified auth callback (sets cookie and redirects)
+        if (stateData?.flow === 'login') {
+          const params = new URLSearchParams({ code, state });
+          if (guild_id) params.append('guild_id', guild_id);
+          return reply.redirect(`/api/auth/discord/callback?${params.toString()}`);
+        }
+
+        // This is a setup flow - redirect to UI with params so OAuthStep can handle it
+        const params = new URLSearchParams({ code, state });
+        if (guild_id) params.append('guild_id', guild_id);
+        return reply.redirect(`/setup?${params.toString()}`);
+      }
+
+      // No OAuth params - redirect to setup UI
+      return reply.redirect('/setup');
+    });
 
     // Start job worker
     startWorker();
