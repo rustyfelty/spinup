@@ -39,14 +39,14 @@ export default function SystemHealthBar({ onClick }: SystemHealthBarProps) {
     if (index < filledCount) {
       if (percent > 90) return 'text-red-500';
       if (percent > 70) return 'text-yellow-500';
-      return 'text-green-500';
+      return 'text-game-purple-500';
     }
     return 'dark:text-gray-600 text-gray-300';
   };
 
   // Calculate overall health status
   const maxPercent = Math.max(memoryPercent, cpuLoadPercent);
-  const healthColor = maxPercent > 90 ? 'text-red-500' : maxPercent > 70 ? 'text-yellow-500' : 'text-green-500';
+  const healthColor = maxPercent > 90 ? 'text-red-500' : maxPercent > 70 ? 'text-yellow-500' : 'text-game-purple-500';
 
   return (
     <div className="relative">
@@ -113,7 +113,7 @@ export default function SystemHealthBar({ onClick }: SystemHealthBarProps) {
                 <div className="pixel-corners-sm bg-gray-700">
                   <div className="pixel-corners-sm-content bg-gray-800/50 p-3">
               <div className="flex items-center space-x-2 mb-2">
-                <Heart className={`w-5 h-5 ${memoryPercent > 90 ? 'text-red-500' : memoryPercent > 70 ? 'text-yellow-500' : 'text-green-500'}`} fill="currentColor" />
+                <Heart className={`w-5 h-5 ${memoryPercent > 90 ? 'text-red-500' : memoryPercent > 70 ? 'text-yellow-500' : 'text-game-purple-500'}`} fill="currentColor" />
                 <span className="text-sm font-bold tracking-wide">MEMORY</span>
               </div>
               <div className="space-y-1.5 text-xs font-mono">
@@ -141,7 +141,7 @@ export default function SystemHealthBar({ onClick }: SystemHealthBarProps) {
                     className={`absolute inset-0 transition-all duration-300 ${
                       memoryPercent > 90 ? 'bg-gradient-to-r from-red-600 to-red-500' :
                       memoryPercent > 70 ? 'bg-gradient-to-r from-yellow-600 to-yellow-500' :
-                      'bg-gradient-to-r from-green-600 to-green-500'
+                      'bg-gradient-to-r from-game-purple-600 to-game-purple-500'
                     }`}
                     style={{ width: `${memoryPercent}%` }}
                   />
@@ -158,7 +158,7 @@ export default function SystemHealthBar({ onClick }: SystemHealthBarProps) {
                 <div className="pixel-corners-sm bg-gray-700">
                   <div className="pixel-corners-sm-content bg-gray-800/50 p-3">
               <div className="flex items-center space-x-2 mb-2">
-                <Zap className={`w-5 h-5 ${cpuLoadPercent > 90 ? 'text-red-500' : cpuLoadPercent > 70 ? 'text-yellow-500' : 'text-green-500'}`} fill="currentColor" />
+                <Zap className={`w-5 h-5 ${cpuLoadPercent > 90 ? 'text-red-500' : cpuLoadPercent > 70 ? 'text-yellow-500' : 'text-game-purple-500'}`} fill="currentColor" />
                 <span className="text-sm font-bold tracking-wide">CPU POWER</span>
               </div>
               <div className="space-y-1.5 text-xs font-mono">
@@ -186,7 +186,7 @@ export default function SystemHealthBar({ onClick }: SystemHealthBarProps) {
                     className={`absolute inset-0 transition-all duration-300 ${
                       cpuLoadPercent > 90 ? 'bg-gradient-to-r from-red-600 to-red-500' :
                       cpuLoadPercent > 70 ? 'bg-gradient-to-r from-yellow-600 to-yellow-500' :
-                      'bg-gradient-to-r from-green-600 to-green-500'
+                      'bg-gradient-to-r from-game-purple-600 to-game-purple-500'
                     }`}
                     style={{ width: `${cpuLoadPercent}%` }}
                   />
@@ -202,7 +202,7 @@ export default function SystemHealthBar({ onClick }: SystemHealthBarProps) {
                 {/* Status */}
                 <div className="text-center pt-2 border-t-2 border-gray-700">
                   <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold border-2 ${
-                    health.status === 'healthy' ? 'bg-green-900 text-green-300 border-green-600' :
+                    health.status === 'healthy' ? 'bg-game-purple-900 text-game-purple-300 border-game-purple-600' :
                     health.status === 'degraded' ? 'bg-yellow-900 text-yellow-300 border-yellow-600' :
                     'bg-red-900 text-red-300 border-red-600'
                   }`}>

@@ -160,7 +160,7 @@ export default function ServerDetail() {
   const statusIcon = {
     RUNNING: <CheckCircle className="w-5 h-5 text-green-500" />,
     STOPPED: <XCircle className="w-5 h-5 text-gray-500" />,
-    CREATING: <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />,
+    CREATING: <Loader2 className="w-5 h-5 text-game-purple-500 animate-spin" />,
     ERROR: <AlertCircle className="w-5 h-5 text-game-red-600" />,
     DELETING: <Loader2 className="w-5 h-5 text-game-red-600 animate-spin" />,
   }[server.status]
@@ -168,7 +168,7 @@ export default function ServerDetail() {
   const statusColor = {
     RUNNING: 'text-green-500 bg-green-50 border-green-200',
     STOPPED: 'text-gray-500 bg-gray-50 border-gray-200',
-    CREATING: 'text-blue-500 bg-blue-50 border-blue-200',
+    CREATING: 'text-game-purple-500 bg-game-purple-50 border-game-purple-200',
     ERROR: 'text-game-red-600 bg-game-red-100 border-game-red-300',
     DELETING: 'text-game-red-600 bg-game-red-100 border-game-red-300',
   }[server.status]
@@ -199,10 +199,10 @@ export default function ServerDetail() {
             <div className="flex items-center gap-2 flex-wrap justify-end">
               {/* Steam Connect Link - Hide on mobile */}
               {GAMES.find(g => g.key === server.gameKey)?.steamGame && server.status === 'RUNNING' && (
-                <div className="hidden lg:block pixel-corners-sm border-blue-700 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
+                <div className="hidden lg:block pixel-corners-sm border-game-purple-700 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
                   <a
                     href={`steam://connect/${getServerIP()}:${(server.ports as any[])?.[0]?.host}`}
-                    className="pixel-corners-sm-content px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                    className="pixel-corners-sm-content px-4 py-2 bg-game-purple-600 text-white hover:bg-game-purple-700 transition-colors flex items-center space-x-2"
                   >
                     <ExternalLink className="w-4 h-4" />
                     <span>Connect via Steam</span>
@@ -211,11 +211,11 @@ export default function ServerDetail() {
               )}
 
               {/* Primary Actions */}
-              <div className="pixel-corners-sm border-game-green-600 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
+              <div className="pixel-corners-sm border-game-purple-600 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
                 <button
                   onClick={() => startMutation.mutate()}
                   disabled={server.status === 'RUNNING' || isActionDisabled || startMutation.isPending}
-                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 bg-game-green-500 text-white hover:bg-game-green-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2 font-bold text-sm"
+                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 bg-game-purple-500 text-white hover:bg-game-purple-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2 font-bold text-sm"
                 >
                 {startMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -225,11 +225,11 @@ export default function ServerDetail() {
                 <span className="hidden sm:inline">{startMutation.isPending ? 'Starting...' : 'Start'}</span>
                 </button>
               </div>
-              <div className="pixel-corners-sm border-game-red-700 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
+              <div className="pixel-corners-sm border-game-purple-600 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
                 <button
                   onClick={() => stopMutation.mutate()}
                   disabled={server.status === 'STOPPED' || isActionDisabled || stopMutation.isPending}
-                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 bg-game-red-600 text-white hover:bg-game-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2 text-sm"
+                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 bg-game-purple-500 text-white hover:bg-game-purple-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2 text-sm"
                 >
                 {stopMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -239,11 +239,11 @@ export default function ServerDetail() {
                 <span className="hidden sm:inline">{stopMutation.isPending ? 'Stopping...' : 'Stop'}</span>
                 </button>
               </div>
-              <div className="pixel-corners-sm border-blue-600 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
+              <div className="pixel-corners-sm border-game-purple-600 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
                 <button
                   onClick={() => restartMutation.mutate()}
                   disabled={server.status !== 'RUNNING' || isActionDisabled || restartMutation.isPending}
-                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2 text-sm"
+                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 bg-game-purple-500 text-white hover:bg-game-purple-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1 sm:space-x-2 text-sm"
                 >
                 {restartMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -281,7 +281,7 @@ export default function ServerDetail() {
                     {server.gameKey}
                   </span>
                 </div>
-                <div className={`pixel-corners-xs border-[3px] ${statusColor.includes('green') ? 'border-green-200' : statusColor.includes('red') ? 'border-game-red-300' : statusColor.includes('blue') ? 'border-blue-200' : 'border-gray-200'}`}>
+                <div className={`pixel-corners-xs border-[3px] ${statusColor.includes('green') ? 'border-green-200' : statusColor.includes('red') ? 'border-game-red-300' : statusColor.includes('blue') ? 'border-game-purple-200' : 'border-gray-200'}`}>
                   <div className={`pixel-corners-xs-content inline-flex items-center space-x-2 px-3 py-1 text-sm font-bold ${statusColor}`}>
                     {statusIcon}
                     <span>{server.status}</span>
@@ -351,19 +351,19 @@ export default function ServerDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Creating Status Banner */}
         {server.status === 'CREATING' && (
-          <div className="pixel-corners dark:bg-blue-800 bg-blue-300 mb-6 shadow-game-light">
-            <div className="pixel-corners-content dark:bg-blue-900/20 bg-blue-50 p-6">
+          <div className="pixel-corners dark:bg-game-purple-800 bg-game-purple-300 mb-6 shadow-game-light">
+            <div className="pixel-corners-content dark:bg-game-purple-900/20 bg-game-purple-50 p-6">
             <div className="flex items-start space-x-4">
-              <Loader2 className="w-6 h-6 text-blue-500 animate-spin flex-shrink-0 mt-1" />
+              <Loader2 className="w-6 h-6 text-game-purple-500 animate-spin flex-shrink-0 mt-1" />
               <div className="flex-1">
-                <h3 className="text-lg font-semibold dark:text-blue-300 text-blue-900 mb-2">Setting Up Your Server</h3>
-                <p className="dark:text-blue-400 text-blue-700 mb-3">
+                <h3 className="text-lg font-semibold dark:text-game-purple-300 text-game-purple-900 mb-2">Setting Up Your Server</h3>
+                <p className="dark:text-game-purple-400 text-game-purple-700 mb-3">
                   Your server is being created. This may take a few minutes as we pull the Docker image and configure your container.
                 </p>
-                <div className="pixel-corners-sm dark:border-blue-800 border-blue-300">
+                <div className="pixel-corners-sm dark:border-game-purple-800 border-game-purple-300">
                   <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-3">
-                  <p className="text-sm font-medium dark:text-blue-300 text-blue-900 mb-2">Setup Progress:</p>
-                  <ul className="text-sm dark:text-blue-400 text-blue-700 space-y-1 list-disc list-inside">
+                  <p className="text-sm font-medium dark:text-game-purple-300 text-game-purple-900 mb-2">Setup Progress:</p>
+                  <ul className="text-sm dark:text-game-purple-400 text-game-purple-700 space-y-1 list-disc list-inside">
                     <li>Creating Docker container</li>
                     <li>Pulling {server.gameKey} image</li>
                     <li>Configuring volumes and ports</li>
@@ -371,7 +371,7 @@ export default function ServerDetail() {
                   </ul>
                   </div>
                 </div>
-                <p className="text-xs text-blue-600 mt-3">
+                <p className="text-xs text-game-purple-600 mt-3">
                   Check the Console tab below to see real-time progress logs
                 </p>
               </div>
@@ -480,10 +480,10 @@ export default function ServerDetail() {
                       </div>
                     </div>
                     {GAMES.find(g => g.key === server.gameKey)?.steamGame && (
-                      <div className="pixel-corners-sm border-blue-600">
+                      <div className="pixel-corners-sm border-game-purple-600">
                         <a
                           href={`steam://connect/${getServerIP()}:${(server.ports as any[])?.[0]?.host}`}
-                          className="pixel-corners-sm-content inline-flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors text-sm shadow-game-sm font-bold"
+                          className="pixel-corners-sm-content inline-flex items-center space-x-2 px-4 py-2 bg-game-purple-500 text-white hover:bg-game-purple-600 transition-colors text-sm shadow-game-sm font-bold"
                         >
                           <ExternalLink className="w-4 h-4" />
                           <span>Connect via Steam</span>
@@ -561,7 +561,7 @@ export default function ServerDetail() {
                   <div className="pixel-corners-sm-content bg-gray-900 p-4 h-[32rem] overflow-y-auto font-mono text-sm shadow-game">
                   {server.status === 'CREATING' && (
                     <div className="mb-4 pb-4 border-b border-gray-700">
-                      <p className="text-blue-400">🔄 Server is being created...</p>
+                      <p className="text-game-purple-400">🔄 Server is being created...</p>
                       <p className="text-gray-500 mt-1">Pulling Docker image and initializing container...</p>
                     </div>
                   )}

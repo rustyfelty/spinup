@@ -370,7 +370,8 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
 
       const { url } = discordOAuth.generateAuthUrl(state, {
         redirectUri,
-        includeBot: false // Don't include bot scope for regular login
+        includeBot: false, // Don't include bot scope for regular login
+        skipPrompt: true   // Skip auth screen for returning users
       });
 
       return reply.send({ url });

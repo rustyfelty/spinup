@@ -84,10 +84,11 @@ export class DiscordOAuthService {
    * Generate OAuth authorization URL with state for CSRF protection
    * Includes 'bot' scope to automatically invite the bot to the selected guild
    */
-  generateAuthUrl(state?: string, options?: { redirectUri?: string; includeBot?: boolean }): { url: string; state: string } {
+  generateAuthUrl(state?: string, options?: { redirectUri?: string; includeBot?: boolean; skipPrompt?: boolean }): { url: string; state: string } {
     const stateToken = state || randomBytes(32).toString('hex');
     const redirectUri = options?.redirectUri || this.redirectUri;
     const includeBot = options?.includeBot !== false; // Default to true for backwards compatibility
+    const skipPrompt = options?.skipPrompt ?? false; // Default to false for safety
 
     const scopes = includeBot
       ? 'identify guilds guilds.members.read bot'
@@ -100,6 +101,11 @@ export class DiscordOAuthService {
       scope: scopes,
       state: stateToken
     });
+
+    // Add prompt=none for returning users (skip auth screen if already authorized)
+    if (skipPrompt) {
+      params.append('prompt', 'none');
+    }
 
     // Only add permissions if including bot
     if (includeBot) {

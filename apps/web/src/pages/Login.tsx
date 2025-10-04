@@ -21,6 +21,18 @@ export default function Login() {
     }
   }
 
+  const handleDevLogin = async () => {
+    setLoading(true)
+    try {
+      await api.post('/api/sso/dev/login')
+      navigate('/')
+    } catch (error) {
+      console.error('Failed to dev login:', error)
+      alert('Failed to dev login')
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:from-slate-950 dark:via-game-dark-900 dark:to-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background pattern */}
@@ -36,18 +48,18 @@ export default function Login() {
 
       {/* Gradient orbs for depth */}
       <div className="absolute top-20 left-20 w-96 h-96 bg-game-green-600 rounded-full filter blur-[128px] opacity-20 animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-600 rounded-full filter blur-[128px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-game-purple-600 rounded-full filter blur-[128px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
 
       <div className="max-w-5xl w-full relative z-10">
         {/* Header section */}
         <div className="text-center mb-12">
           <div className="pixel-corners bg-game-green-600/20 mb-6 inline-block backdrop-blur-sm">
-            <div className="pixel-corners-content inline-flex items-center justify-center p-4 bg-gradient-to-br from-game-green-600 to-blue-600">
+            <div className="pixel-corners-content inline-flex items-center justify-center p-4 bg-gradient-to-br from-game-green-600 to-game-purple-600">
               <Gamepad2 className="w-12 h-12 text-white" />
             </div>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-3 tracking-tight">
-            Welcome to <span className="bg-gradient-to-r from-game-green-400 to-blue-400 bg-clip-text text-transparent">SpinUp</span>
+            Welcome to <span className="bg-gradient-to-r from-game-green-400 to-game-purple-400 bg-clip-text text-transparent">SpinUp</span>
           </h1>
           <p className="text-xl text-slate-300 dark:text-slate-400">Game server management for Discord communities</p>
         </div>
@@ -75,6 +87,20 @@ export default function Login() {
                 </button>
               </div>
 
+              {/* Dev login button (development only) */}
+              {import.meta.env.DEV && (
+                <div className="pixel-corners bg-game-purple-600/20 hover:shadow-lg hover:shadow-purple-600/30 transition-all duration-200">
+                  <button
+                    onClick={handleDevLogin}
+                    disabled={loading}
+                    className="pixel-corners-content w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-game-purple-600/30 text-game-purple-300 font-semibold hover:bg-game-purple-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all group"
+                  >
+                    <Zap className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span className="text-base">{loading ? 'Logging in...' : 'Dev Login (Skip Discord)'}</span>
+                  </button>
+                </div>
+              )}
+
               <p className="text-sm text-slate-500 dark:text-slate-600 mt-6">
                 By logging in, you agree to our terms of service and privacy policy
               </p>
@@ -93,18 +119,18 @@ export default function Login() {
                   <p className="text-sm text-slate-400 dark:text-slate-500">Discord OAuth with encrypted sessions</p>
                 </div>
                 <div className="text-center group">
-                  <div className="pixel-corners-sm bg-blue-600/30 mb-3 inline-block transition-all duration-200 group-hover:bg-blue-600/40">
-                    <div className="pixel-corners-sm-content inline-flex items-center justify-center w-12 h-12 bg-blue-600/20">
-                      <Zap className="w-6 h-6 text-blue-400 group-hover:scale-110 transition-transform" />
+                  <div className="pixel-corners-sm bg-game-purple-600/30 mb-3 inline-block transition-all duration-200 group-hover:bg-game-purple-600/40">
+                    <div className="pixel-corners-sm-content inline-flex items-center justify-center w-12 h-12 bg-game-purple-600/20">
+                      <Zap className="w-6 h-6 text-game-purple-400 group-hover:scale-110 transition-transform" />
                     </div>
                   </div>
                   <h4 className="font-semibold text-white mb-1">Lightning Fast</h4>
                   <p className="text-sm text-slate-400 dark:text-slate-500">Deploy servers in seconds</p>
                 </div>
                 <div className="text-center group">
-                  <div className="pixel-corners-sm bg-purple-600/30 mb-3 inline-block transition-all duration-200 group-hover:bg-purple-600/40">
-                    <div className="pixel-corners-sm-content inline-flex items-center justify-center w-12 h-12 bg-purple-600/20">
-                      <Server className="w-6 h-6 text-purple-400 group-hover:scale-110 transition-transform" />
+                  <div className="pixel-corners-sm bg-game-purple-600/30 mb-3 inline-block transition-all duration-200 group-hover:bg-game-purple-600/40">
+                    <div className="pixel-corners-sm-content inline-flex items-center justify-center w-12 h-12 bg-game-purple-600/20">
+                      <Server className="w-6 h-6 text-game-purple-400 group-hover:scale-110 transition-transform" />
                     </div>
                   </div>
                   <h4 className="font-semibold text-white mb-1">Easy Management</h4>
