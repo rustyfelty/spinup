@@ -352,100 +352,6 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         return reply.code(500).send({ error: "Failed to create dev session" });
       }
     });
-
-    app.get("/dev/login", async (req, reply) => {
-      // HTML page for easy dev login
-      const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>SpinUp Dev Login</title>
-          <style>
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              min-height: 100vh;
-              margin: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            }
-            .card {
-              background: white;
-              padding: 2rem;
-              border-radius: 1rem;
-              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-              max-width: 400px;
-              width: 100%;
-              text-align: center;
-            }
-            h1 {
-              margin: 0 0 0.5rem 0;
-              color: #1a202c;
-            }
-            p {
-              color: #4a5568;
-              margin: 0 0 2rem 0;
-            }
-            button {
-              background: #667eea;
-              color: white;
-              border: none;
-              padding: 0.75rem 2rem;
-              border-radius: 0.5rem;
-              font-size: 1rem;
-              font-weight: 500;
-              cursor: pointer;
-              transition: all 0.2s;
-              width: 100%;
-            }
-            button:hover {
-              background: #5a67d8;
-              transform: translateY(-1px);
-            }
-            .warning {
-              background: #fef2c7;
-              border: 1px solid #f6e05e;
-              border-radius: 0.5rem;
-              padding: 0.75rem;
-              margin-top: 1.5rem;
-              color: #744210;
-              font-size: 0.875rem;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <h1>SpinUp Dev Login</h1>
-            <p>Quick login for development mode</p>
-            <button onclick="login()">Login as Dev User</button>
-            <div class="warning">
-              ⚠️ Development mode only. In production, use Discord authentication.
-            </div>
-          </div>
-          <script>
-            async function login() {
-              try {
-                const response = await fetch('/api/sso/dev/login', {
-                  method: 'POST',
-                  credentials: 'include'
-                });
-                const data = await response.json();
-                if (data.success) {
-                  const webOrigin = '${process.env.WEB_ORIGIN || "http://localhost:5173"}';
-                  window.location.href = webOrigin + '/orgs/' + data.org.id + '/servers';
-                }
-              } catch (error) {
-                alert('Login failed: ' + error);
-              }
-            }
-          </script>
-        </body>
-        </html>
-      `;
-
-      reply.type('text/html').send(html);
-    });
   }
 
   // Discord OAuth Login (for regular user login, not setup)
@@ -575,6 +481,26 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         if (!user || user.memberships.length === 0) {
           return reply.redirect(`${webOrigin}/login?error=no-access`);
         }
+
+        // Update user profile with latest Discord info
+        const avatarUrl = discordUser.avatar
+          ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+          : null;
+
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            displayName: discordUser.global_name || discordUser.username,
+            avatarUrl: avatarUrl
+          },
+          include: {
+            memberships: {
+              include: {
+                org: true
+              }
+            }
+          }
+        });
 
         // Get first membership's org
         const membership = user.memberships[0];

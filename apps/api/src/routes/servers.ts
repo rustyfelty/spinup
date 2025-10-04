@@ -48,7 +48,27 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
         }
       });
 
-      return reply.status(200).send(servers);
+      // Fetch creator info for each server
+      const serversWithCreators = await Promise.all(
+        servers.map(async (server) => {
+          const creator = await prisma.user.findUnique({
+            where: { id: server.createdBy },
+            select: {
+              id: true,
+              displayName: true,
+              avatarUrl: true,
+              discordId: true
+            }
+          });
+
+          return {
+            ...server,
+            creator
+          };
+        })
+      );
+
+      return reply.status(200).send(serversWithCreators);
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({
@@ -148,9 +168,8 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
         });
       }
 
-      // TODO: Get createdBy from authenticated user context
-      // For now using a placeholder
-      const createdBy = "system";
+      // Get authenticated user ID from JWT
+      const createdBy = request.user?.sub || "system";
 
       // Use provided resources or default to recommended
       const finalMemoryCap = memoryCap || game.resources.recommended.memory;
