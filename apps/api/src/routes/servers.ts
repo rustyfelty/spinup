@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { GAMES } from "@spinup/shared";
 import { enqueueCreate, enqueueStart, enqueueStop, enqueueDelete } from "../workers/jobs";
 import { authenticate, authorizeServer, authorizeOrgAccess } from "../middleware/auth";
+import { rawgApi } from "../services/rawg-api";
 
 // Workaround for Vite module transformation issue with prisma singleton
 // Create a fresh client instance instead of importing from ../services/prisma
@@ -187,6 +188,23 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
           memoryCap: finalMemoryCap,
           cpuShares: finalCpuShares
         }
+      });
+
+      // Fetch game background asynchronously (don't await - fire and forget)
+      rawgApi.getBackgroundByGameKey(gameKey).then(async (backgroundUrl) => {
+        if (backgroundUrl) {
+          try {
+            await prisma.server.update({
+              where: { id: server.id },
+              data: { backgroundImageUrl: backgroundUrl }
+            });
+            fastify.log.info(`[Background] Cached background for server ${server.id}: ${backgroundUrl}`);
+          } catch (error) {
+            fastify.log.error(`[Background] Failed to cache background for server ${server.id}:`, error);
+          }
+        }
+      }).catch((error) => {
+        fastify.log.error(`[Background] Error fetching background for ${gameKey}:`, error);
       });
 
       // Enqueue CREATE job

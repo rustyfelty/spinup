@@ -54,7 +54,8 @@ export default function MagicLinkVerify() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+      <div className="pixel-corners bg-gray-300 shadow-xl max-w-md w-full">
+        <div className="pixel-corners-content bg-white p-8">
         {status === 'verifying' && (
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
@@ -105,6 +106,7 @@ export default function MagicLinkVerify() {
             <AlertCircle className="w-4 h-4" />
             <span>Magic links expire after 5 minutes</span>
           </div>
+        </div>
         </div>
       </div>
     </div>

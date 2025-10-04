@@ -134,7 +134,7 @@ export default function AIAssistant({ serverId, serverName }: AIAssistantProps) 
   return (
     <div className="h-[600px] flex flex-col">
       {/* Status Bar */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 mb-4">
+      <div className="bg-gradient-to-r from-purple-50 to-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-purple-600 rounded-lg">

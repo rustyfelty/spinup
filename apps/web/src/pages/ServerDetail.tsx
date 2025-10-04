@@ -10,9 +10,6 @@ import { serversApi, configApi } from '../lib/api'
 import type { Server } from '@spinup/shared'
 import { GAMES } from '@spinup/shared'
 import FileManager from '../components/FileManager'
-import SystemHealthBar from '../components/SystemHealthBar'
-import SystemHealthModal from '../components/SystemHealthModal'
-import ThemeToggle from '../components/ThemeToggle'
 
 // Get server IP from environment
 const getServerIP = () => {
@@ -31,7 +28,6 @@ export default function ServerDetail() {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'console' | 'files' | 'settings'>('console')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showHealthModal, setShowHealthModal] = useState(false)
   const [consoleLogs, setConsoleLogs] = useState<string[]>([])
 
   // Fetch server details
@@ -129,7 +125,7 @@ export default function ServerDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-game-green-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-game-purple-500" />
       </div>
     )
   }
@@ -142,10 +138,10 @@ export default function ServerDetail() {
             <div className="pixel-corners-content dark:bg-gray-800 bg-white p-8 text-center">
               <AlertCircle className="w-12 h-12 text-game-red-600 mx-auto mb-4" />
               <h2 className="text-xl font-semibold mb-2 dark:text-white text-gray-900">Server not found</h2>
-            <div className="pixel-corners-sm border-game-green-700 dark:border-game-green-600">
+            <div className="pixel-corners-sm border-game-purple-700 dark:border-game-purple-600">
               <button
                 onClick={() => navigate('/')}
-                className="pixel-corners-sm-content mt-4 px-4 py-2 bg-game-green-600 dark:bg-game-green-500 text-white hover:bg-game-green-700 dark:hover:bg-game-green-600 shadow-game-sm font-bold"
+                className="pixel-corners-sm-content mt-4 px-4 py-2 bg-game-purple-600 dark:bg-game-purple-500 text-white hover:bg-game-purple-700 dark:hover:bg-game-purple-600 shadow-game-sm font-bold"
               >
                 Back to Dashboard
               </button>
@@ -158,7 +154,7 @@ export default function ServerDetail() {
   }
 
   const statusIcon = {
-    RUNNING: <CheckCircle className="w-5 h-5 text-green-500" />,
+    RUNNING: <CheckCircle className="w-5 h-5 text-game-purple-500" />,
     STOPPED: <XCircle className="w-5 h-5 text-gray-500" />,
     CREATING: <Loader2 className="w-5 h-5 text-game-purple-500 animate-spin" />,
     ERROR: <AlertCircle className="w-5 h-5 text-game-red-600" />,
@@ -166,7 +162,7 @@ export default function ServerDetail() {
   }[server.status]
 
   const statusColor = {
-    RUNNING: 'text-green-500 bg-green-50 border-green-200',
+    RUNNING: 'text-game-purple-500 bg-game-purple-50 border-game-purple-200',
     STOPPED: 'text-gray-500 bg-gray-50 border-gray-200',
     CREATING: 'text-game-purple-500 bg-game-purple-50 border-game-purple-200',
     ERROR: 'text-game-red-600 bg-game-red-100 border-game-red-300',
@@ -176,12 +172,28 @@ export default function ServerDetail() {
   const isActionDisabled = server.status === 'CREATING' || server.status === 'DELETING'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100 relative">
+      {/* Background Image with Parallax Effect */}
+      {server.backgroundImageUrl && (
+        <div className="fixed inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat transform scale-105"
+            style={{
+              backgroundImage: `url(${server.backgroundImageUrl})`,
+              filter: 'blur(8px)',
+            }}
+          />
+          <div className="absolute inset-0 dark:bg-gray-900/85 bg-gray-50/90" />
+        </div>
+      )}
+
+      {/* Content Container */}
+      <div className="relative z-10">
       {/* Header */}
-      <header className="dark:bg-gray-800/95 bg-white dark:border-gray-700 border-b-2 border-gray-300 sticky top-0 z-40 shadow-game-sm">
+      <header className="dark:bg-gray-800/80 bg-white/90 backdrop-blur-md dark:border-gray-700 border-b-2 border-gray-300 sticky top-0 z-40 shadow-game-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-3 gap-3">
-            <div className="flex items-center space-x-2 flex-shrink-0">
+            <div className="flex items-center space-x-3 flex-shrink-0 flex-1 min-w-0">
               <div className="pixel-corners-sm dark:border-gray-700 border-gray-300 transition-all duration-150 hover:shadow-game active:translate-y-1 active:shadow-none">
                 <button
                   onClick={() => navigate('/')}
@@ -190,9 +202,7 @@ export default function ServerDetail() {
                   <ArrowLeft className="w-5 h-5 dark:text-gray-300 text-gray-700" />
                 </button>
               </div>
-              <div className="hidden sm:block">
-                <SystemHealthBar onClick={() => setShowHealthModal(true)} />
-              </div>
+              <h1 className="text-lg sm:text-xl font-pixel dark:text-white text-gray-900 truncate">{server.name}</h1>
             </div>
 
             {/* Action Buttons - Responsive Layout */}
@@ -268,80 +278,86 @@ export default function ServerDetail() {
         </div>
       </header>
 
-      {/* Server Info Sub-Header */}
-      <div className="dark:bg-gray-800 bg-white dark:border-b-2 border-b-2 dark:border-gray-700 border-gray-300 shadow-game-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            {/* Left: Server Name and Game */}
-            <div>
-              <h1 className="text-2xl md:text-3xl font-pixel dark:text-white text-gray-900 mb-2">{server.name}</h1>
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="pixel-corners-xs dark:border-gray-600 border-gray-300">
-                  <span className="pixel-corners-xs-content inline-flex items-center px-3 py-1 text-sm font-bold dark:bg-gray-700 bg-gray-100 dark:text-white text-gray-900">
-                    {server.gameKey}
-                  </span>
+      {/* Server Info Sub-Header - Condensed Stats */}
+      <div className="dark:bg-gray-800/80 bg-white/90 backdrop-blur-md dark:border-b-2 border-b-2 dark:border-gray-700 border-gray-300 shadow-game-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-sm">
+            {/* Game Type Badge */}
+            <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+              <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-2">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-xs font-bold dark:text-gray-400 text-gray-600">GAME</span>
                 </div>
-                <div className={`pixel-corners-xs border-[3px] ${statusColor.includes('green') ? 'border-green-200' : statusColor.includes('red') ? 'border-game-red-300' : statusColor.includes('blue') ? 'border-game-purple-200' : 'border-gray-200'}`}>
-                  <div className={`pixel-corners-xs-content inline-flex items-center space-x-2 px-3 py-1 text-sm font-bold ${statusColor}`}>
-                    {statusIcon}
-                    <span>{server.status}</span>
-                  </div>
+                <p className="text-sm font-bold dark:text-white text-gray-900 truncate">
+                  {server.gameKey}
+                </p>
+              </div>
+            </div>
+
+            {/* Status Badge */}
+            <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+              <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-2">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-xs font-bold dark:text-gray-400 text-gray-600">STATUS</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {statusIcon}
+                  <p className="text-sm font-bold dark:text-white text-gray-900">
+                    {server.status}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Right: Server Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              {/* Memory */}
-              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <HardDrive className="w-4 h-4 dark:text-game-green-400 text-game-green-600" />
-                    <span className="text-xs font-bold dark:text-gray-400 text-gray-600">MEMORY</span>
-                  </div>
-                  <p className="text-lg font-bold dark:text-white text-gray-900">
-                    {(server.memoryCap / 1024).toFixed(1)}GB
-                  </p>
+            {/* Memory */}
+            <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+              <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-2">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <HardDrive className="w-3.5 h-3.5 dark:text-game-purple-400 text-game-purple-600" />
+                  <span className="text-xs font-bold dark:text-gray-400 text-gray-600">RAM</span>
                 </div>
+                <p className="text-sm font-bold dark:text-white text-gray-900">
+                  {(server.memoryCap / 1024).toFixed(1)}GB
+                </p>
               </div>
+            </div>
 
-              {/* CPU */}
-              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Activity className="w-4 h-4 dark:text-game-green-400 text-game-green-600" />
-                    <span className="text-xs font-bold dark:text-gray-400 text-gray-600">CPU</span>
-                  </div>
-                  <p className="text-lg font-bold dark:text-white text-gray-900">
-                    {(server.cpuShares / 1024).toFixed(1)} cores
-                  </p>
+            {/* CPU */}
+            <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+              <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-2">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Activity className="w-3.5 h-3.5 dark:text-game-purple-400 text-game-purple-600" />
+                  <span className="text-xs font-bold dark:text-gray-400 text-gray-600">CPU</span>
                 </div>
+                <p className="text-sm font-bold dark:text-white text-gray-900">
+                  {(server.cpuShares / 1024).toFixed(1)}
+                </p>
               </div>
+            </div>
 
-              {/* Connection */}
-              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Globe className="w-4 h-4 dark:text-game-green-400 text-game-green-600" />
-                    <span className="text-xs font-bold dark:text-gray-400 text-gray-600">PORT</span>
-                  </div>
-                  <p className="text-lg font-bold dark:text-white text-gray-900 font-mono">
-                    {(server.ports as any[])?.[0]?.host || 'N/A'}
-                  </p>
+            {/* Port */}
+            <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+              <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-2">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Globe className="w-3.5 h-3.5 dark:text-game-purple-400 text-game-purple-600" />
+                  <span className="text-xs font-bold dark:text-gray-400 text-gray-600">PORT</span>
                 </div>
+                <p className="text-sm font-bold dark:text-white text-gray-900 font-mono">
+                  {(server.ports as any[])?.[0]?.host || 'N/A'}
+                </p>
               </div>
+            </div>
 
-              {/* Created Date */}
-              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className="w-4 h-4 dark:text-game-green-400 text-game-green-600" />
-                    <span className="text-xs font-bold dark:text-gray-400 text-gray-600">CREATED</span>
-                  </div>
-                  <p className="text-lg font-bold dark:text-white text-gray-900">
-                    {new Date(server.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </p>
+            {/* Created Date */}
+            <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+              <div className="pixel-corners-sm-content dark:bg-gray-900/50 bg-gray-50 p-2">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <Clock className="w-3.5 h-3.5 dark:text-game-purple-400 text-game-purple-600" />
+                  <span className="text-xs font-bold dark:text-gray-400 text-gray-600">CREATED</span>
                 </div>
+                <p className="text-sm font-bold dark:text-white text-gray-900">
+                  {new Date(server.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
               </div>
             </div>
           </div>
@@ -399,7 +415,7 @@ export default function ServerDetail() {
                   className={`
                     py-4 px-1 border-b-2 font-bold text-sm flex items-center space-x-2
                     ${activeTab === tab.id
-                      ? 'border-game-green-500 text-game-green-600 dark:text-game-green-400'
+                      ? 'border-game-purple-500 text-game-purple-600 dark:text-game-purple-400'
                       : 'border-transparent dark:text-gray-400 text-gray-500 dark:hover:text-gray-200 hover:text-gray-700 hover:border-gray-300'}
                   `}
                 >
@@ -424,7 +440,7 @@ export default function ServerDetail() {
                   className={`
                     py-3 px-2 border-b-2 font-bold text-xs flex flex-col items-center justify-center gap-1 min-h-[64px]
                     ${activeTab === tab.id
-                      ? 'border-game-green-500 text-game-green-600 dark:text-game-green-400 dark:bg-gray-700/50 bg-gray-50'
+                      ? 'border-game-purple-500 text-game-purple-600 dark:text-game-purple-400 dark:bg-gray-700/50 bg-gray-50'
                       : 'border-transparent dark:text-gray-400 text-gray-500'}
                   `}
                 >
@@ -524,7 +540,7 @@ export default function ServerDetail() {
                     <h3 className="text-base font-pixel mb-4 dark:text-white text-gray-900">Minecraft Configuration</h3>
                     {configLoading ? (
                       <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-6 h-6 animate-spin text-game-green-500" />
+                        <Loader2 className="w-6 h-6 animate-spin text-game-purple-500" />
                       </div>
                     ) : (
                       <ConfigEditor
@@ -662,11 +678,7 @@ export default function ServerDetail() {
           </div>
         </div>
       )}
-
-      {/* System Health Modal */}
-      {showHealthModal && (
-        <SystemHealthModal onClose={() => setShowHealthModal(false)} />
-      )}
+      </div>
     </div>
   )
 }
@@ -688,7 +700,7 @@ function ConfigEditor({ config, onSave, isSaving }: any) {
             type="text"
             value={values.level_name || ''}
             onChange={(e) => handleChange('level_name', e.target.value)}
-            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           />
         </div>
         <div>
@@ -696,7 +708,7 @@ function ConfigEditor({ config, onSave, isSaving }: any) {
           <select
             value={values.difficulty || 'normal'}
             onChange={(e) => handleChange('difficulty', e.target.value)}
-            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           >
             <option value="peaceful">Peaceful</option>
             <option value="easy">Easy</option>
@@ -709,7 +721,7 @@ function ConfigEditor({ config, onSave, isSaving }: any) {
           <select
             value={values.gamemode || 'survival'}
             onChange={(e) => handleChange('gamemode', e.target.value)}
-            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           >
             <option value="survival">Survival</option>
             <option value="creative">Creative</option>
@@ -723,7 +735,7 @@ function ConfigEditor({ config, onSave, isSaving }: any) {
             type="number"
             value={values.max_players || 20}
             onChange={(e) => handleChange('max_players', parseInt(e.target.value))}
-            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           />
         </div>
         <div className="md:col-span-2">
@@ -732,7 +744,7 @@ function ConfigEditor({ config, onSave, isSaving }: any) {
             type="text"
             value={values.motd || ''}
             onChange={(e) => handleChange('motd', e.target.value)}
-            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            className="w-full px-3 py-2 border-2 dark:border-gray-700 border-gray-300 rounded focus:ring-2 focus:ring-game-purple-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
           />
         </div>
       </div>
@@ -767,11 +779,11 @@ function ConfigEditor({ config, onSave, isSaving }: any) {
             Whitelist
           </label>
         </div>
-        <div className="pixel-corners-sm border-game-green-700 dark:border-game-green-600">
+        <div className="pixel-corners-sm border-game-purple-700 dark:border-game-purple-600">
           <button
             type="submit"
             disabled={isSaving}
-            className="pixel-corners-sm-content px-4 py-2 bg-game-green-600 dark:bg-game-green-500 text-white hover:bg-game-green-700 dark:hover:bg-game-green-600 disabled:opacity-50 flex items-center space-x-2 shadow-game-sm font-bold"
+            className="pixel-corners-sm-content px-4 py-2 bg-game-purple-600 dark:bg-game-purple-500 text-white hover:bg-game-purple-700 dark:hover:bg-game-purple-600 disabled:opacity-50 flex items-center space-x-2 shadow-game-sm font-bold"
           >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>

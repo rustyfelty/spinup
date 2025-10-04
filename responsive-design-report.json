@@ -1,0 +1,1558 @@
+{
+  "timestamp": "2025-10-03T18:45:24.524Z",
+  "totalIssues": 44,
+  "issuesByViewport": [
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "count": 11,
+      "issues": [
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Dashboard",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 375,
+            "clientWidth": 375,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Dashboard",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.w-full",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+            "text": "Login with Discord",
+            "width": 279,
+            "height": 56,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 375,
+            "clientWidth": 375,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: div.dark:bg-gray-900/50 bg-gray-50 rounded-lg p-4 mb-4 border-2 dark:border-gray-700 border-gray-300",
+          "element": "div.dark:bg-gray-900/50",
+          "details": {
+            "text": "Configure which Discord roles have access to diffe",
+            "scrollWidth": 309,
+            "clientWidth": 287,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: div.flex gap-3",
+          "element": "div.flex",
+          "details": {
+            "text": "Manage Role PermissionsChange Discord Server",
+            "scrollWidth": 293,
+            "clientWidth": 255,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 3 lines",
+          "element": "button.px-4",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+            "text": "← Back",
+            "width": 81.5625,
+            "height": 68,
+            "lines": 3
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Button Too Small",
+          "severity": "high",
+          "description": "Button too small for touch (40x40px)",
+          "element": "button.p-2",
+          "details": {
+            "type": "too-small",
+            "tag": "button",
+            "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+            "text": "",
+            "width": 40,
+            "height": 40
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 4 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+            "text": "Manage Role Permissions",
+            "width": 161.0625,
+            "height": 92,
+            "lines": 4
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 4 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+            "text": "Change Discord Server",
+            "width": 120.109375,
+            "height": 92,
+            "lines": 4
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 3 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+            "text": "Save Settings",
+            "width": 167.25,
+            "height": 68,
+            "lines": 3
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-SE",
+          "viewportSize": "375x667",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 3 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+            "text": "Cancel",
+            "width": 111.75,
+            "height": 68,
+            "lines": 3
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "count": 9,
+      "issues": [
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Dashboard",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 414,
+            "clientWidth": 414,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Dashboard",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.w-full",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+            "text": "Login with Discord",
+            "width": 318,
+            "height": 56,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 414,
+            "clientWidth": 414,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 3 lines",
+          "element": "button.px-4",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+            "text": "← Back",
+            "width": 88.640625,
+            "height": 68,
+            "lines": 3
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Button Too Small",
+          "severity": "high",
+          "description": "Button too small for touch (40x40px)",
+          "element": "button.p-2",
+          "details": {
+            "type": "too-small",
+            "tag": "button",
+            "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+            "text": "",
+            "width": 40,
+            "height": 40
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 4 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+            "text": "Manage Role Permissions",
+            "width": 161.0625,
+            "height": 92,
+            "lines": 4
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 4 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+            "text": "Change Discord Server",
+            "width": 120.9375,
+            "height": 92,
+            "lines": 4
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+            "text": "Save Settings",
+            "width": 176.703125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Mobile-iPhone-11-Pro-Max",
+          "viewportSize": "414x896",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+            "text": "Cancel",
+            "width": 111.75,
+            "height": 44,
+            "lines": 2
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "count": 8,
+      "issues": [
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Dashboard",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.w-full",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+            "text": "Login with Discord",
+            "width": 448,
+            "height": 56,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 768,
+            "clientWidth": 768,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-4",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+            "text": "← Back",
+            "width": 98.09375,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Button Too Small",
+          "severity": "high",
+          "description": "Button too small for touch (40x40px)",
+          "element": "button.p-2",
+          "details": {
+            "type": "too-small",
+            "tag": "button",
+            "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+            "text": "",
+            "width": 40,
+            "height": 40
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+            "text": "Manage Role Permissions",
+            "width": 283.0625,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+            "text": "Change Discord Server",
+            "width": 258.3125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+            "text": "Save Settings",
+            "width": 176.703125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Tablet-iPad",
+          "viewportSize": "768x1024",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+            "text": "Cancel",
+            "width": 111.75,
+            "height": 44,
+            "lines": 2
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "Desktop-Small",
+      "count": 8,
+      "issues": [
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Dashboard",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.w-full",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+            "text": "Login with Discord",
+            "width": 448,
+            "height": 56,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 1366,
+            "clientWidth": 1366,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-4",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+            "text": "← Back",
+            "width": 98.09375,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Button Too Small",
+          "severity": "high",
+          "description": "Button too small for touch (40x40px)",
+          "element": "button.p-2",
+          "details": {
+            "type": "too-small",
+            "tag": "button",
+            "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+            "text": "",
+            "width": 40,
+            "height": 40
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+            "text": "Manage Role Permissions",
+            "width": 283.0625,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+            "text": "Change Discord Server",
+            "width": 258.3125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+            "text": "Save Settings",
+            "width": 176.703125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Small",
+          "viewportSize": "1366x768",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+            "text": "Cancel",
+            "width": 111.75,
+            "height": 44,
+            "lines": 2
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "count": 8,
+      "issues": [
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Dashboard",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.w-full",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+            "text": "Login with Discord",
+            "width": 448,
+            "height": 56,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Text Overflow",
+          "severity": "medium",
+          "description": "Element overflowing: html.dark",
+          "element": "html.dark",
+          "details": {
+            "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+            "scrollWidth": 1920,
+            "clientWidth": 1920,
+            "overflow": "visible"
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-4",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+            "text": "← Back",
+            "width": 98.09375,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Button Too Small",
+          "severity": "high",
+          "description": "Button too small for touch (40x40px)",
+          "element": "button.p-2",
+          "details": {
+            "type": "too-small",
+            "tag": "button",
+            "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+            "text": "",
+            "width": 40,
+            "height": 40
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+            "text": "Manage Role Permissions",
+            "width": 283.0625,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+            "text": "Change Discord Server",
+            "width": 258.3125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+            "text": "Save Settings",
+            "width": 176.703125,
+            "height": 44,
+            "lines": 2
+          }
+        },
+        {
+          "viewport": "Desktop-Full-HD",
+          "viewportSize": "1920x1080",
+          "route": "Settings",
+          "type": "Button Text Wrapping",
+          "severity": "medium",
+          "description": "Button text wrapping to 2 lines",
+          "element": "button.px-6",
+          "details": {
+            "type": "wrapping",
+            "tag": "button",
+            "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+            "text": "Cancel",
+            "width": 111.75,
+            "height": 44,
+            "lines": 2
+          }
+        }
+      ]
+    }
+  ],
+  "allIssues": [
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Dashboard",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Dashboard",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.w-full",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+        "text": "Login with Discord",
+        "width": 279,
+        "height": 56,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 375,
+        "clientWidth": 375,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: div.dark:bg-gray-900/50 bg-gray-50 rounded-lg p-4 mb-4 border-2 dark:border-gray-700 border-gray-300",
+      "element": "div.dark:bg-gray-900/50",
+      "details": {
+        "text": "Configure which Discord roles have access to diffe",
+        "scrollWidth": 309,
+        "clientWidth": 287,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: div.flex gap-3",
+      "element": "div.flex",
+      "details": {
+        "text": "Manage Role PermissionsChange Discord Server",
+        "scrollWidth": 293,
+        "clientWidth": 255,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 3 lines",
+      "element": "button.px-4",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+        "text": "← Back",
+        "width": 81.5625,
+        "height": 68,
+        "lines": 3
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Button Too Small",
+      "severity": "high",
+      "description": "Button too small for touch (40x40px)",
+      "element": "button.p-2",
+      "details": {
+        "type": "too-small",
+        "tag": "button",
+        "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+        "text": "",
+        "width": 40,
+        "height": 40
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 4 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+        "text": "Manage Role Permissions",
+        "width": 161.0625,
+        "height": 92,
+        "lines": 4
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 4 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+        "text": "Change Discord Server",
+        "width": 120.109375,
+        "height": 92,
+        "lines": 4
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 3 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+        "text": "Save Settings",
+        "width": 167.25,
+        "height": 68,
+        "lines": 3
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-SE",
+      "viewportSize": "375x667",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 3 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+        "text": "Cancel",
+        "width": 111.75,
+        "height": 68,
+        "lines": 3
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Dashboard",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 414,
+        "clientWidth": 414,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Dashboard",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.w-full",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+        "text": "Login with Discord",
+        "width": 318,
+        "height": 56,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 414,
+        "clientWidth": 414,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 3 lines",
+      "element": "button.px-4",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+        "text": "← Back",
+        "width": 88.640625,
+        "height": 68,
+        "lines": 3
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Button Too Small",
+      "severity": "high",
+      "description": "Button too small for touch (40x40px)",
+      "element": "button.p-2",
+      "details": {
+        "type": "too-small",
+        "tag": "button",
+        "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+        "text": "",
+        "width": 40,
+        "height": 40
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 4 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+        "text": "Manage Role Permissions",
+        "width": 161.0625,
+        "height": 92,
+        "lines": 4
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 4 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+        "text": "Change Discord Server",
+        "width": 120.9375,
+        "height": 92,
+        "lines": 4
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+        "text": "Save Settings",
+        "width": 176.703125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Mobile-iPhone-11-Pro-Max",
+      "viewportSize": "414x896",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+        "text": "Cancel",
+        "width": 111.75,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Dashboard",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.w-full",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+        "text": "Login with Discord",
+        "width": 448,
+        "height": 56,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 768,
+        "clientWidth": 768,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-4",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+        "text": "← Back",
+        "width": 98.09375,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Button Too Small",
+      "severity": "high",
+      "description": "Button too small for touch (40x40px)",
+      "element": "button.p-2",
+      "details": {
+        "type": "too-small",
+        "tag": "button",
+        "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+        "text": "",
+        "width": 40,
+        "height": 40
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+        "text": "Manage Role Permissions",
+        "width": 283.0625,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+        "text": "Change Discord Server",
+        "width": 258.3125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+        "text": "Save Settings",
+        "width": 176.703125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Tablet-iPad",
+      "viewportSize": "768x1024",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+        "text": "Cancel",
+        "width": 111.75,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Dashboard",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.w-full",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+        "text": "Login with Discord",
+        "width": 448,
+        "height": 56,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 1366,
+        "clientWidth": 1366,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-4",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+        "text": "← Back",
+        "width": 98.09375,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Button Too Small",
+      "severity": "high",
+      "description": "Button too small for touch (40x40px)",
+      "element": "button.p-2",
+      "details": {
+        "type": "too-small",
+        "tag": "button",
+        "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+        "text": "",
+        "width": 40,
+        "height": 40
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+        "text": "Manage Role Permissions",
+        "width": 283.0625,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+        "text": "Change Discord Server",
+        "width": 258.3125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+        "text": "Save Settings",
+        "width": 176.703125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Small",
+      "viewportSize": "1366x768",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+        "text": "Cancel",
+        "width": 111.75,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Dashboard",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.w-full",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "w-full max-w-md mx-auto flex items-center justify-center space-x-3 px-8 py-4 bg-[#5865F2] text-white font-medium rounded-xl hover:bg-[#4752C4] disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg mb-6",
+        "text": "Login with Discord",
+        "width": 448,
+        "height": 56,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Text Overflow",
+      "severity": "medium",
+      "description": "Element overflowing: html.dark",
+      "element": "html.dark",
+      "details": {
+        "text": "\n    import { injectIntoGlobalHook } from \"/@react",
+        "scrollWidth": 1920,
+        "clientWidth": 1920,
+        "overflow": "visible"
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-4",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition border-2 dark:border-gray-700 border-gray-300 rounded-lg dark:hover:bg-gray-700 hover:bg-gray-100 font-bold",
+        "text": "← Back",
+        "width": 98.09375,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Button Too Small",
+      "severity": "high",
+      "description": "Button too small for touch (40x40px)",
+      "element": "button.p-2",
+      "details": {
+        "type": "too-small",
+        "tag": "button",
+        "class": "p-2 rounded-lg border-2 transition-all hover:scale-105\n        bg-gradient-to-br dark:from-gray-800 dark:to-gray-900 from-gray-100 to-gray-200\n        dark:border-gray-700 border-gray-300\n        dark:text-yellow-400 text-gray-700\n        hover:shadow-lg",
+        "text": "",
+        "width": 40,
+        "height": 40
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition border-2 border-blue-700 shadow-game-sm",
+        "text": "Manage Role Permissions",
+        "width": 283.0625,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white rounded-lg font-bold transition border-2 border-game-red-800 shadow-game-sm",
+        "text": "Change Discord Server",
+        "width": 258.3125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white rounded-lg font-bold transition border-2 border-game-green-700 shadow-game-sm",
+        "text": "Save Settings",
+        "width": 176.703125,
+        "height": 44,
+        "lines": 2
+      }
+    },
+    {
+      "viewport": "Desktop-Full-HD",
+      "viewportSize": "1920x1080",
+      "route": "Settings",
+      "type": "Button Text Wrapping",
+      "severity": "medium",
+      "description": "Button text wrapping to 2 lines",
+      "element": "button.px-6",
+      "details": {
+        "type": "wrapping",
+        "tag": "button",
+        "class": "px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 rounded-lg font-bold transition border-2 dark:border-gray-600 border-gray-400 shadow-game-sm",
+        "text": "Cancel",
+        "width": 111.75,
+        "height": 44,
+        "lines": 2
+      }
+    }
+  ]
+}

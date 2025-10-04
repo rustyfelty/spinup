@@ -144,8 +144,8 @@ export default function GuildSelectStep({ onNext, onBack, refreshStatus }: StepP
           <p className="text-gray-600 mb-4">
             You'll need to log in with Discord to select which server SpinUp should manage.
           </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <p className="text-sm text-purple-800">
               <strong>Note:</strong> You must be the owner or administrator of the Discord server
               you want to connect.
             </p>

@@ -80,8 +80,8 @@ export default function BotSetupStep({ onNext, onBack, refreshStatus }: StepProp
         <p className="text-gray-600 mb-4">
           To manage roles and fetch all server information, SpinUp needs a bot application. Don't worry - this is easy to set up!
         </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm text-blue-800">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+          <p className="text-sm text-purple-800">
             <strong>Why a bot?</strong> Discord's OAuth doesn't allow fetching all guild roles - only your roles. A bot can see all roles, which is needed to configure permissions properly.
           </p>
         </div>

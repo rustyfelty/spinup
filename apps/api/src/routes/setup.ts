@@ -1349,23 +1349,14 @@ export default async function setupRoutes(fastify: FastifyInstance) {
         setupState.rolesConfigured;
 
       if (isComplete) {
-        // Check for JWT cookie authentication
-        const token = request.cookies['spinup_sess'];
-        if (!token) {
-          return reply.status(401).send({
-            error: 'Unauthorized',
-            message: 'Authentication required to reset completed system'
-          });
-        }
-
+        // Require authentication to reset completed system
         try {
-          // Verify JWT token
-          const decoded = fastify.jwt.verify(token);
-          fastify.log.info(`System reset initiated by user: ${(decoded as any).sub}`);
+          await request.jwtVerify();
+          fastify.log.info(`System reset initiated by user: ${request.user?.sub}`);
         } catch (err) {
           return reply.status(401).send({
             error: 'Unauthorized',
-            message: 'Invalid authentication token'
+            message: 'Authentication required to reset completed system'
           });
         }
       }

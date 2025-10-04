@@ -40,19 +40,22 @@ function WelcomeStep({ onNext }: StepProps) {
   return (
     <div className="text-center py-8">
       <div className="text-6xl mb-6">🚀</div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">
+      <h2 className="text-3xl font-bold text-white mb-4">
         Welcome to SpinUp Setup
       </h2>
-      <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
+      <p className="text-slate-300 dark:text-slate-400 mb-8 max-w-2xl mx-auto text-lg">
         SpinUp makes it easy to manage game servers for your Discord community.
         This wizard will help you connect your Discord server and configure permissions.
       </p>
-      <button
-        onClick={onNext}
-        className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-      >
-        Get Started
-      </button>
+      <div className="pixel-corners bg-game-purple-600 hover:shadow-lg hover:shadow-game-purple-600/30 transition-all duration-200">
+        <button
+          onClick={onNext}
+          className="pixel-corners-content px-8 py-4 bg-gradient-to-r from-game-purple-600 to-game-purple-700 text-white font-bold hover:from-game-purple-700 hover:to-game-purple-800 transition-all hover:scale-105 active:scale-95"
+          aria-label="Start setup wizard"
+        >
+          Get Started
+        </button>
+      </div>
     </div>
   );
 }
@@ -64,18 +67,21 @@ function CompleteStep() {
   return (
     <div className="text-center py-8">
       <div className="text-6xl mb-6">✅</div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">
+      <h2 className="text-3xl font-bold text-white mb-4">
         Setup Complete!
       </h2>
-      <p className="text-gray-600 mb-8">
+      <p className="text-slate-300 dark:text-slate-400 mb-8 text-lg">
         Your SpinUp instance is now configured and ready to use.
       </p>
-      <button
-        onClick={() => navigate('/')}
-        className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-      >
-        Go to Dashboard
-      </button>
+      <div className="pixel-corners bg-game-purple-600 hover:shadow-lg hover:shadow-game-purple-600/30 transition-all duration-200">
+        <button
+          onClick={() => navigate('/')}
+          className="pixel-corners-content px-8 py-4 bg-gradient-to-r from-game-purple-600 to-game-purple-700 text-white font-bold hover:from-game-purple-700 hover:to-game-purple-800 transition-all hover:scale-105 active:scale-95"
+          aria-label="Navigate to dashboard"
+        >
+          Go to Dashboard
+        </button>
+      </div>
     </div>
   );
 }
@@ -265,10 +271,25 @@ export default function SetupWizard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-700">
-        <div className="text-center text-white">
-          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-xl">Loading setup wizard...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:from-slate-950 dark:via-game-dark-900 dark:to-slate-950 relative overflow-hidden">
+        {/* Animated background pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `
+              repeating-linear-gradient(90deg, transparent, transparent 35px, rgba(59, 130, 246, 0.3) 35px, rgba(59, 130, 246, 0.3) 36px),
+              repeating-linear-gradient(0deg, transparent, transparent 35px, rgba(59, 130, 246, 0.3) 35px, rgba(59, 130, 246, 0.3) 36px)
+            `,
+            backgroundSize: '36px 36px'
+          }}></div>
+        </div>
+
+        {/* Gradient orbs */}
+        <div className="absolute top-20 left-20 w-96 h-96 bg-game-green-600 rounded-full filter blur-[128px] opacity-20 animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-game-purple-600 rounded-full filter blur-[128px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+        <div className="text-center relative z-10">
+          <div className="w-16 h-16 border-4 border-game-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl font-bold text-white">Loading setup wizard...</p>
         </div>
       </div>
     );
@@ -278,44 +299,85 @@ export default function SetupWizard() {
   const currentStep = steps[currentStepIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-700 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 dark:from-slate-950 dark:via-game-dark-900 dark:to-slate-950 py-12 px-4 relative overflow-hidden">
+      {/* Animated background pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `
+            repeating-linear-gradient(90deg, transparent, transparent 35px, rgba(59, 130, 246, 0.3) 35px, rgba(59, 130, 246, 0.3) 36px),
+            repeating-linear-gradient(0deg, transparent, transparent 35px, rgba(59, 130, 246, 0.3) 35px, rgba(59, 130, 246, 0.3) 36px)
+          `,
+          backgroundSize: '36px 36px'
+        }}></div>
+      </div>
+
+      {/* Gradient orbs for depth */}
+      <div className="absolute top-20 left-20 w-96 h-96 bg-game-green-600 rounded-full filter blur-[128px] opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-game-purple-600 rounded-full filter blur-[128px] opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+
+      <div className="max-w-5xl mx-auto relative z-10">
+        {/* Logo/Branding */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
+            <span className="bg-gradient-to-r from-game-green-400 to-game-purple-400 bg-clip-text text-transparent">SpinUp</span> Setup
+          </h1>
+          <p className="text-lg text-slate-300 dark:text-slate-400">Configure your game server platform</p>
+        </div>
+
         {/* Progress Bar */}
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            {steps.map((step, index) => (
-              <div
-                key={step.id}
-                className={`flex-1 ${index !== 0 ? 'ml-2' : ''}`}
-              >
+          <div className="flex gap-2 items-center">
+            {steps.map((step, index) => {
+              const isActive = index === currentStepIndex;
+              const isCompleted = index < currentStepIndex;
+              const isFuture = index > currentStepIndex;
+
+              return (
                 <div
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    index <= currentStepIndex
-                      ? 'bg-white'
-                      : 'bg-white bg-opacity-30'
-                  }`}
-                />
-                <p
-                  className={`text-sm mt-2 text-center ${
-                    index <= currentStepIndex
-                      ? 'text-white font-medium'
-                      : 'text-white text-opacity-60'
-                  }`}
+                  key={step.id}
+                  className={`
+                    relative overflow-hidden
+                    transition-all duration-500 ease-in-out
+                    border-2 rounded h-12
+                    ${isActive ? 'flex-grow' : 'w-16'}
+                    ${isCompleted ? 'bg-game-purple-500 border-game-purple-600' : ''}
+                    ${isActive ? 'bg-gradient-to-r from-game-purple-500 to-game-purple-600 border-game-purple-700 shadow-lg shadow-game-purple-600/30' : ''}
+                    ${isFuture ? 'bg-gray-700 border-gray-600' : ''}
+                  `}
                 >
-                  {step.title}
-                </p>
-              </div>
-            ))}
+                  {/* Shimmer effect for active step */}
+                  {isActive && (
+                    <div className="absolute inset-0 shimmer-bg"></div>
+                  )}
+
+                  {/* Content */}
+                  <div className="relative z-10 px-4 h-full flex items-center justify-center gap-2">
+                    {/* Checkmark for completed */}
+                    {isCompleted && (
+                      <span className="text-white text-xs font-bold">✓</span>
+                    )}
+
+                    {/* Active step shows full title */}
+                    {isActive && (
+                      <span className="text-white font-pixel text-xs whitespace-nowrap">
+                        {step.title}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Step Content */}
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
-            <h1 className="text-3xl font-bold text-white">
+        <div className="pixel-corners bg-game-purple-600/20 backdrop-blur-sm shadow-2xl shadow-game-purple-600/20">
+          <div className="pixel-corners-content bg-gradient-to-br from-slate-900/95 to-slate-800/95 dark:from-slate-950/95 dark:to-game-dark-900/95 overflow-hidden">
+          <div className="bg-gradient-to-r from-game-purple-600 to-game-purple-700 px-8 py-6 border-b-4 border-game-purple-800">
+            <h1 className="text-3xl font-bold text-white tracking-tight">
               {currentStep.title}
             </h1>
-            <p className="text-indigo-100 mt-2">
+            <p className="text-purple-100 mt-2">
               {currentStep.description}
             </p>
           </div>
@@ -360,8 +422,16 @@ export default function SetupWizard() {
         </div>
 
         {/* Step Counter */}
-        <div className="text-center mt-6 text-white text-opacity-80">
+        <div className="text-center mt-6 mb-8 text-slate-400 font-semibold">
           Step {currentStepIndex + 1} of {steps.length}
+        </div>
+        </div>
+
+        {/* Footer note */}
+        <div className="text-center mt-8">
+          <p className="text-slate-500 dark:text-slate-600 text-sm">
+            Powered by Docker · Secured by Discord OAuth · Built for gaming communities
+          </p>
         </div>
       </div>
     </div>

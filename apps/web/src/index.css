@@ -5,5 +5,214 @@
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900;
+    font-size: 17px;
+  }
+}
+
+@layer utilities {
+  /* Stretch pixel font vertically */
+  .font-pixel {
+    transform: scaleY(1.25);
+    display: inline-block;
+  }
+
+  /* Shimmer animation for progress bar */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s infinite;
+  }
+
+  /* Shake animation for validation errors */
+  @keyframes shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+      transform: translateX(-4px);
+    }
+    20%, 40%, 60%, 80% {
+      transform: translateX(4px);
+    }
+  }
+
+  .animate-shake {
+    animation: shake 0.5s ease-in-out;
+  }
+
+  /* Pixelated border base - use box-shadow to create visible borders */
+  .pixel-border {
+    position: relative;
+    box-shadow:
+      /* Top edge */
+      0 -6px 0 0 currentColor,
+      /* Right edge */
+      6px 0 0 0 currentColor,
+      /* Bottom edge */
+      0 6px 0 0 currentColor,
+      /* Left edge */
+      -6px 0 0 0 currentColor;
+  }
+
+  /* Minecraft-style pixelated corners */
+  .rounded-chunky {
+    clip-path: polygon(
+      0px 15px, 5px 15px, 5px 10px, 10px 10px, 10px 5px, 15px 5px,
+      15px 0px, calc(100% - 15px) 0px, calc(100% - 15px) 5px,
+      calc(100% - 10px) 5px, calc(100% - 10px) 10px, calc(100% - 5px) 10px,
+      calc(100% - 5px) 15px, 100% 15px, 100% calc(100% - 15px),
+      calc(100% - 5px) calc(100% - 15px), calc(100% - 5px) calc(100% - 10px),
+      calc(100% - 10px) calc(100% - 10px), calc(100% - 10px) calc(100% - 5px),
+      calc(100% - 15px) calc(100% - 5px), calc(100% - 15px) 100%,
+      15px 100%, 15px calc(100% - 5px), 10px calc(100% - 5px),
+      10px calc(100% - 10px), 5px calc(100% - 10px), 5px calc(100% - 15px),
+      0px calc(100% - 15px)
+    );
+  }
+
+  /* Pixelated corners with visible border using wrapper technique */
+  .pixel-corners {
+    clip-path: polygon(
+      0px 15px, 5px 15px, 5px 10px, 10px 10px, 10px 5px, 15px 5px,
+      15px 0px, calc(100% - 15px) 0px, calc(100% - 15px) 5px,
+      calc(100% - 10px) 5px, calc(100% - 10px) 10px, calc(100% - 5px) 10px,
+      calc(100% - 5px) 15px, 100% 15px, 100% calc(100% - 15px),
+      calc(100% - 5px) calc(100% - 15px), calc(100% - 5px) calc(100% - 10px),
+      calc(100% - 10px) calc(100% - 10px), calc(100% - 10px) calc(100% - 5px),
+      calc(100% - 15px) calc(100% - 5px), calc(100% - 15px) 100%,
+      15px 100%, 15px calc(100% - 5px), 10px calc(100% - 5px),
+      10px calc(100% - 10px), 5px calc(100% - 10px), 5px calc(100% - 15px),
+      0px calc(100% - 15px)
+    );
+    padding: 6px;
+  }
+
+  .pixel-corners-content {
+    clip-path: polygon(
+      0px 9px, 5px 9px, 5px 4px, 9px 4px, 9px 0px,
+      calc(100% - 9px) 0px, calc(100% - 9px) 4px, calc(100% - 4px) 4px,
+      calc(100% - 4px) 9px, 100% 9px, 100% calc(100% - 9px),
+      calc(100% - 4px) calc(100% - 9px), calc(100% - 4px) calc(100% - 4px),
+      calc(100% - 9px) calc(100% - 4px), calc(100% - 9px) 100%,
+      9px 100%, 9px calc(100% - 4px), 4px calc(100% - 4px),
+      4px calc(100% - 9px), 0px calc(100% - 9px)
+    );
+    width: 100%;
+    height: 100%;
+  }
+
+  .rounded-chunky-sm {
+    clip-path: polygon(
+      0 6px,
+      3px 6px,
+      3px 3px,
+      6px 3px,
+      6px 0,
+      calc(100% - 6px) 0,
+      calc(100% - 6px) 3px,
+      calc(100% - 3px) 3px,
+      calc(100% - 3px) 6px,
+      100% 6px,
+      100% calc(100% - 6px),
+      calc(100% - 3px) calc(100% - 6px),
+      calc(100% - 3px) calc(100% - 3px),
+      calc(100% - 6px) calc(100% - 3px),
+      calc(100% - 6px) 100%,
+      6px 100%,
+      6px calc(100% - 3px),
+      3px calc(100% - 3px),
+      3px calc(100% - 6px),
+      0 calc(100% - 6px)
+    );
+  }
+
+  .pixel-corners-sm {
+    clip-path: polygon(
+      0 6px, 3px 6px, 3px 3px, 6px 3px, 6px 0,
+      calc(100% - 6px) 0, calc(100% - 6px) 3px, calc(100% - 3px) 3px,
+      calc(100% - 3px) 6px, 100% 6px, 100% calc(100% - 6px),
+      calc(100% - 3px) calc(100% - 6px), calc(100% - 3px) calc(100% - 3px),
+      calc(100% - 6px) calc(100% - 3px), calc(100% - 6px) 100%,
+      6px 100%, 6px calc(100% - 3px), 3px calc(100% - 3px),
+      3px calc(100% - 6px), 0 calc(100% - 6px)
+    );
+    padding: 4px;
+  }
+
+  .pixel-corners-sm-content {
+    clip-path: polygon(
+      0 2px, 2px 2px, 2px 0,
+      calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px,
+      100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px),
+      0 calc(100% - 2px)
+    );
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Extra thin pixelated corners */
+  .rounded-chunky-xs {
+    clip-path: polygon(
+      0 4px,
+      2px 4px,
+      2px 2px,
+      4px 2px,
+      4px 0,
+      calc(100% - 4px) 0,
+      calc(100% - 4px) 2px,
+      calc(100% - 2px) 2px,
+      calc(100% - 2px) 4px,
+      100% 4px,
+      100% calc(100% - 4px),
+      calc(100% - 2px) calc(100% - 4px),
+      calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 4px) calc(100% - 2px),
+      calc(100% - 4px) 100%,
+      4px 100%,
+      4px calc(100% - 2px),
+      2px calc(100% - 2px),
+      2px calc(100% - 4px),
+      0 calc(100% - 4px)
+    );
+  }
+
+  .pixel-corners-xs {
+    clip-path: polygon(
+      0 4px, 2px 4px, 2px 2px, 4px 2px, 4px 0,
+      calc(100% - 4px) 0, calc(100% - 4px) 2px, calc(100% - 2px) 2px,
+      calc(100% - 2px) 4px, 100% 4px, 100% calc(100% - 4px),
+      calc(100% - 2px) calc(100% - 4px), calc(100% - 2px) calc(100% - 2px),
+      calc(100% - 4px) calc(100% - 2px), calc(100% - 4px) 100%,
+      4px 100%, 4px calc(100% - 2px), 2px calc(100% - 2px),
+      2px calc(100% - 4px), 0 calc(100% - 4px)
+    );
+    padding: 3px;
+  }
+
+  .pixel-corners-xs-content {
+    clip-path: polygon(
+      0 1px, 1px 1px, 1px 0,
+      calc(100% - 1px) 0, calc(100% - 1px) 1px, 100% 1px,
+      100% calc(100% - 1px), calc(100% - 1px) calc(100% - 1px),
+      calc(100% - 1px) 100%, 1px 100%, 1px calc(100% - 1px),
+      0 calc(100% - 1px)
+    );
+    width: 100%;
+    height: 100%;
   }
 }

@@ -62,19 +62,20 @@ enum Role {
 }
 
 model Server {
-  id         String   @id @default(cuid())
-  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  orgId      String
-  name       String
-  gameKey    String
-  status     ServerStatus @default(STOPPED)
-  ports      Json     @default("[]")
-  containerId String?
-  createdBy  String
-  memoryCap  Int      @default(2048)  // Memory limit in MB
-  cpuShares  Int      @default(2048)  // CPU shares (1024 = 1 core)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  org                Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  orgId              String
+  name               String
+  gameKey            String
+  status             ServerStatus @default(STOPPED)
+  ports              Json     @default("[]")
+  containerId        String?
+  createdBy          String
+  memoryCap          Int      @default(2048)  // Memory limit in MB
+  cpuShares          Int      @default(2048)  // CPU shares (1024 = 1 core)
+  backgroundImageUrl String?  // Game background image from RAWG API
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   configs       ConfigVersion[]
   jobs          Job[]

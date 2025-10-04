@@ -25,19 +25,19 @@ export default function ServerBranding({ org }: ServerBrandingProps) {
         <img
           src={iconUrl}
           alt={org.discordGuildName || org.name}
-          className="w-10 h-10 rounded-full ring-2 ring-purple-500/20"
+          className="w-10 h-10 rounded-full ring-2 ring-game-green-500/20"
         />
       ) : (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-game-green-500 to-game-green-700 flex items-center justify-center text-white font-bold text-lg border-2 border-game-green-600">
           {(org.discordGuildName || org.name).charAt(0).toUpperCase()}
         </div>
       )}
       <div className="flex flex-col">
-        <h1 className="text-xl font-bold text-gray-900">
+        <h1 className="text-lg font-pixel dark:text-white text-gray-900">
           {org.discordGuildName || org.name}
         </h1>
         {org.discordDescription && (
-          <p className="text-xs text-gray-500 truncate max-w-md">
+          <p className="text-xs dark:text-gray-400 text-gray-500 truncate max-w-md">
             {org.discordDescription}
           </p>
         )}

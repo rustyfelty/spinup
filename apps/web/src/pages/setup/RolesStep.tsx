@@ -37,45 +37,60 @@ interface RolePermissions {
 const permissionGroups = [
   {
     title: 'Server Management',
+    borderColor: 'dark:bg-purple-700 bg-purple-400',
+    bgColor: 'dark:bg-purple-600 bg-purple-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canCreateServer', label: 'Create Servers', description: 'Create new game servers' },
-      { key: 'canDeleteServer', label: 'Delete Servers', description: 'Permanently delete servers' },
-      { key: 'canStartServer', label: 'Start Servers', description: 'Start stopped servers' },
-      { key: 'canStopServer', label: 'Stop Servers', description: 'Stop running servers' },
-      { key: 'canRestartServer', label: 'Restart Servers', description: 'Restart servers' }
+      { key: 'canCreateServer', label: 'Create', description: 'Create new game servers' },
+      { key: 'canStartServer', label: 'Start', description: 'Start stopped servers' },
+      { key: 'canStopServer', label: 'Stop', description: 'Stop running servers' },
+      { key: 'canRestartServer', label: 'Restart', description: 'Restart servers' },
+      { key: 'canDeleteServer', label: 'Delete', description: 'Permanently delete servers' }
     ]
   },
   {
     title: 'Configuration',
+    borderColor: 'dark:bg-purple-800 bg-purple-400',
+    bgColor: 'dark:bg-purple-700 bg-purple-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canEditConfig', label: 'Edit Config Files', description: 'Modify server.properties and configs' },
-      { key: 'canEditFiles', label: 'Edit Server Files', description: 'Upload/edit/delete files' },
+      { key: 'canEditConfig', label: 'Edit Config', description: 'Modify server configs' },
+      { key: 'canEditFiles', label: 'Edit Files', description: 'Upload/edit/delete files' },
       { key: 'canInstallMods', label: 'Install Mods', description: 'Add plugins and mods' }
     ]
   },
   {
     title: 'Backups',
+    borderColor: 'dark:bg-amber-700 bg-amber-400',
+    bgColor: 'dark:bg-amber-600 bg-amber-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canCreateBackup', label: 'Create Backups', description: 'Make server backups' },
-      { key: 'canRestoreBackup', label: 'Restore Backups', description: 'Restore from backups' },
-      { key: 'canDeleteBackup', label: 'Delete Backups', description: 'Remove backups' }
+      { key: 'canCreateBackup', label: 'Create', description: 'Make server backups' },
+      { key: 'canRestoreBackup', label: 'Restore', description: 'Restore from backups' },
+      { key: 'canDeleteBackup', label: 'Delete', description: 'Remove backups' }
     ]
   },
   {
     title: 'Monitoring',
+    borderColor: 'dark:bg-green-700 bg-green-400',
+    bgColor: 'dark:bg-green-600 bg-green-500',
+    textColor: 'text-white',
     permissions: [
       { key: 'canViewLogs', label: 'View Logs', description: 'Read server logs' },
       { key: 'canViewMetrics', label: 'View Metrics', description: 'See CPU, RAM, player count' },
-      { key: 'canViewConsole', label: 'View Console', description: 'View live server console' },
-      { key: 'canExecuteCommands', label: 'Execute Commands', description: 'Run console commands' }
+      { key: 'canViewConsole', label: 'Console', description: 'View live server console' },
+      { key: 'canExecuteCommands', label: 'Commands', description: 'Run console commands' }
     ]
   },
   {
     title: 'Administration',
+    borderColor: 'dark:bg-red-700 bg-red-400',
+    bgColor: 'dark:bg-red-600 bg-red-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canManageMembers', label: 'Manage Members', description: 'Add/remove team members' },
-      { key: 'canManageRoles', label: 'Manage Roles', description: 'Edit role permissions' },
-      { key: 'canManageSettings', label: 'Manage Settings', description: 'Change organization settings' }
+      { key: 'canManageMembers', label: 'Members', description: 'Add/remove team members' },
+      { key: 'canManageRoles', label: 'Roles', description: 'Edit role permissions' },
+      { key: 'canManageSettings', label: 'Settings', description: 'Change organization settings' }
     ]
   }
 ];
@@ -92,8 +107,8 @@ const defaultPermissions = {
   canCreateBackup: false,
   canRestoreBackup: false,
   canDeleteBackup: false,
-  canViewLogs: true,  // Default to true
-  canViewMetrics: true,  // Default to true
+  canViewLogs: true,
+  canViewMetrics: true,
   canViewConsole: false,
   canExecuteCommands: false,
   canManageMembers: false,
@@ -130,11 +145,11 @@ interface RolesStepProps extends StepProps {
 export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, sessionToken, selectedGuildId }: RolesStepProps) {
   const [roles, setRoles] = useState<DiscordRole[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermissions>({});
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchingRoles, setFetchingRoles] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orgName, setOrgName] = useState('');
+  const [expandedRoles, setExpandedRoles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (selectedGuildId && sessionToken) {
@@ -155,31 +170,23 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
       const fetchedRoles = response.data.roles || [];
       const guildName = response.data.guildName || '';
 
+      // Sort roles by position (highest position first)
+      fetchedRoles.sort((a: DiscordRole, b: DiscordRole) => b.position - a.position);
+
       setRoles(fetchedRoles);
 
-      // Auto-fill organization name with guild name if not already set
       if (!orgName && guildName) {
         setOrgName(guildName);
       }
 
-      // Initialize permissions for all roles
-      // Admin roles get all permissions enabled by default
       const initialPermissions: RolePermissions = {};
       fetchedRoles.forEach((role: DiscordRole) => {
-        // Check if role name suggests admin/owner privileges
         const isAdminRole = /admin|owner|moderator|mod/i.test(role.name);
         initialPermissions[role.id] = isAdminRole ? { ...allPermissionsEnabled } : { ...defaultPermissions };
       });
       setRolePermissions(initialPermissions);
-
-      // Select first role by default
-      if (fetchedRoles.length > 0) {
-        setSelectedRole(fetchedRoles[0].id);
-      }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to fetch Discord roles';
-
-      // Special handling for rate limit errors
       if (errorMessage.includes('rate limit')) {
         setError('Discord API rate limit reached. Please wait 1-2 minutes and refresh the page to try again.');
       } else {
@@ -200,52 +207,47 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
     }));
   };
 
-  const selectAllForRole = (roleId: string) => {
+  const toggleAllForRole = (roleId: string) => {
+    const currentPerms = rolePermissions[roleId];
+    const hasAnyEnabled = Object.values(currentPerms).some(v => v);
+
     setRolePermissions(prev => ({
       ...prev,
-      [roleId]: { ...allPermissionsEnabled }
+      [roleId]: hasAnyEnabled
+        ? { ...defaultPermissions, canViewLogs: false, canViewMetrics: false }
+        : { ...allPermissionsEnabled }
     }));
   };
 
-  const removeAllForRole = (roleId: string) => {
-    setRolePermissions(prev => ({
-      ...prev,
-      [roleId]: {
-        ...defaultPermissions,
-        canViewLogs: false,
-        canViewMetrics: false
-      }
-    }));
-  };
+  const togglePermissionForAll = (permission: string) => {
+    const allHavePermission = roles.every(role => rolePermissions[role.id][permission as keyof typeof defaultPermissions]);
 
-  const selectAllInGroup = (roleId: string, group: typeof permissionGroups[0]) => {
     setRolePermissions(prev => {
-      const updated = { ...prev[roleId] };
-      group.permissions.forEach(perm => {
-        updated[perm.key as keyof typeof updated] = true;
+      const updated = { ...prev };
+      roles.forEach(role => {
+        updated[role.id] = {
+          ...updated[role.id],
+          [permission]: !allHavePermission
+        };
       });
-      return {
-        ...prev,
-        [roleId]: updated
-      };
+      return updated;
     });
   };
 
-  const removeAllInGroup = (roleId: string, group: typeof permissionGroups[0]) => {
-    setRolePermissions(prev => {
-      const updated = { ...prev[roleId] };
-      group.permissions.forEach(perm => {
-        updated[perm.key as keyof typeof updated] = false;
-      });
-      return {
-        ...prev,
-        [roleId]: updated
-      };
+  const toggleRoleExpanded = (roleId: string) => {
+    setExpandedRoles(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(roleId)) {
+        newSet.delete(roleId);
+      } else {
+        newSet.add(roleId);
+      }
+      return newSet;
     });
   };
 
   const getRoleColor = (color: number | undefined) => {
-    if (!color || color === 0) return '#99AAB5'; // Default Discord gray
+    if (!color || color === 0) return '#99AAB5';
     return `#${color.toString(16).padStart(6, '0')}`;
   };
 
@@ -264,7 +266,6 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
     setError(null);
 
     try {
-      // Build role permissions array
       const rolePermsArray = roles.map(role => ({
         discordRoleId: role.id,
         discordRoleName: role.name,
@@ -272,13 +273,11 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
         permissions: rolePermissions[role.id] || defaultPermissions
       }));
 
-      // First, configure roles (sets rolesConfigured flag)
       await axios.post(`${API_URL}/api/setup/configure-roles`, {
         guildId: selectedGuildId,
         rolePermissions: rolePermsArray
       });
 
-      // Then complete setup
       await axios.post(`${API_URL}/api/setup/complete`, {
         orgName,
         rolePermissions: rolePermsArray
@@ -296,183 +295,200 @@ export default function RolesStep({ onNext, onBack, setupStatus, refreshStatus, 
   if (fetchingRoles) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading Discord roles...</p>
+        <div className="w-16 h-16 border-4 dark:border-game-green-400 border-game-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="dark:text-gray-400 text-gray-600 font-bold">Loading Discord roles...</p>
       </div>
     );
   }
 
-  const currentRole = roles.find(r => r.id === selectedRole);
-  const currentPermissions = selectedRole ? rolePermissions[selectedRole] : null;
+  if (roles.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="pixel-corners-sm dark:bg-yellow-800 bg-yellow-200">
+          <div className="pixel-corners-sm-content dark:bg-yellow-900/20 bg-yellow-50 p-6 text-center">
+            <p className="text-2xl mb-4">⚠️</p>
+            <p className="dark:text-yellow-300 text-yellow-800 font-bold mb-2">No roles found</p>
+            <p className="dark:text-yellow-400 text-yellow-700 text-sm">
+              No roles found for your account in this server. You may need to be assigned a role in Discord first.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onBack}
+            className="px-4 py-2 border-2 dark:border-gray-700 border-gray-300 rounded-chunky-sm dark:hover:bg-gray-700 hover:bg-gray-100 transition-colors dark:text-white text-gray-900 font-bold"
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Configure Permissions
-        </h3>
-        <p className="text-gray-600 mb-4">
-          Set what each Discord role can do in SpinUp. Select a role and check the actions they're allowed to perform.
-        </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Note:</strong> We're showing your Discord roles from the selected server.
-            Configure permissions for your admin roles now, and you can add more roles later as team members join.
+      {/* Info Card */}
+      <div className="pixel-corners-sm dark:bg-purple-800 bg-purple-200">
+        <div className="pixel-corners-sm-content dark:bg-purple-900/20 bg-purple-50 p-4">
+          <p className="dark:text-purple-300 text-purple-800">
+            <strong>How it works:</strong> Check the boxes to give each Discord role permission to perform actions in SpinUp.
+            Users with multiple roles get all permissions from their roles combined.
           </p>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Organization Name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={orgName}
-          onChange={(e) => setOrgName(e.target.value)}
-          placeholder="My Gaming Community"
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        />
+      {/* Organization Name */}
+      <div className="pixel-corners dark:bg-gray-700 bg-gray-300 shadow-game">
+        <div className="pixel-corners-content dark:bg-gray-800 bg-white p-6">
+          <label className="block mb-2">
+            <span className="text-sm font-bold dark:text-gray-300 text-gray-700">
+              Organization Name <span className="text-game-red-600">*</span>
+            </span>
+            <p className="text-xs dark:text-gray-400 text-gray-600 mb-3">
+              This will be the name of your organization in SpinUp
+            </p>
+          </label>
+          <input
+            type="text"
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+            placeholder="My Gaming Community"
+            className="w-full px-4 py-3 border-2 dark:border-gray-700 border-gray-300 rounded-chunky-sm focus:ring-2 focus:ring-game-green-500 focus:border-game-green-500 dark:bg-gray-700 dark:text-white text-gray-900 font-bold placeholder:font-normal dark:placeholder:text-gray-500 placeholder:text-gray-400"
+          />
+        </div>
       </div>
 
-      {roles.length === 0 ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-yellow-800">
-            No roles found for your account in this server. You may need to be assigned a role in Discord first.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Role List */}
-          <div className="lg:col-span-1 space-y-2">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Discord Roles</h4>
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                onClick={() => setSelectedRole(role.id)}
-                className={`w-full p-3 rounded-lg text-left transition-all ${
-                  selectedRole === role.id
-                    ? 'bg-indigo-50 border-2 border-indigo-600'
-                    : 'bg-white border-2 border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: getRoleColor(role.color) }}
-                  />
-                  <span className="font-medium text-sm truncate">{role.name}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+      {/* Role Cards */}
+      <div className="space-y-4">
+        {roles.map((role) => {
+          const isExpanded = expandedRoles.has(role.id);
 
-          {/* Permission Checkboxes */}
-          <div className="lg:col-span-2">
-            {currentRole && currentPermissions ? (
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+          return (
+            <div key={role.id} className="pixel-corners dark:bg-gray-700 bg-gray-300 shadow-game">
+              <div className="pixel-corners-content dark:bg-gray-800 bg-white">
+                {/* Role Header - Clickable */}
+                <button
+                  onClick={() => toggleRoleExpanded(role.id)}
+                  className="w-full flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: getRoleColor(currentRole.color) }}
+                      className="w-4 h-4 rounded-full flex-shrink-0 border-2 dark:border-gray-600 border-gray-400"
+                      style={{ backgroundColor: getRoleColor(role.color) }}
                     />
-                    <h4 className="text-lg font-semibold text-gray-800">{currentRole.name}</h4>
+                    <h4 className="font-bold dark:text-white text-gray-900">{role.name}</h4>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => selectAllForRole(selectedRole)}
-                      className="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={() => removeAllForRole(selectedRole)}
-                      className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
-                    >
-                      Remove All
-                    </button>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs dark:text-gray-400 text-gray-600">
+                      {isExpanded ? 'Click to collapse' : 'Click to expand'}
+                    </span>
+                    <span className={`dark:text-gray-400 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                      ▼
+                    </span>
                   </div>
-                </div>
+                </button>
 
-                <div className="space-y-6">
-                  {permissionGroups.map((group) => (
-                    <div key={group.title}>
-                      <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-sm font-semibold text-gray-700">{group.title}</h5>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => selectAllInGroup(selectedRole, group)}
-                            className="px-2 py-0.5 text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded transition-colors"
-                          >
-                            Select All
-                          </button>
-                          <button
-                            onClick={() => removeAllInGroup(selectedRole, group)}
-                            className="px-2 py-0.5 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
-                          >
-                            Remove All
-                          </button>
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="px-6 pb-6 pt-2 border-t-2 dark:border-gray-700 border-gray-300">
+                    {/* Quick Actions */}
+                    <div className="flex gap-2 mb-6">
+                      <button
+                        onClick={() => setRolePermissions(prev => ({
+                          ...prev,
+                          [role.id]: { ...allPermissionsEnabled }
+                        }))}
+                        className="pixel-corners-xs dark:bg-game-green-700 bg-game-green-600"
+                      >
+                        <div className="pixel-corners-xs-content dark:bg-game-green-600 bg-game-green-500 px-3 py-1.5 dark:hover:bg-game-green-500 hover:bg-game-green-400 transition-colors">
+                          <span className="text-white font-bold text-xs">Select All</span>
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        {group.permissions.map((perm) => (
-                          <label
-                            key={perm.key}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-white cursor-pointer transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={currentPermissions[perm.key as keyof typeof currentPermissions]}
-                              onChange={() => togglePermission(selectedRole, perm.key)}
-                              className="mt-1 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-800">{perm.label}</p>
-                              <p className="text-xs text-gray-500">{perm.description}</p>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
+                      </button>
+                      <button
+                        onClick={() => setRolePermissions(prev => ({
+                          ...prev,
+                          [role.id]: { ...defaultPermissions, canViewLogs: false, canViewMetrics: false }
+                        }))}
+                        className="pixel-corners-xs dark:bg-gray-600 bg-gray-400"
+                      >
+                        <div className="pixel-corners-xs-content dark:bg-gray-700 bg-gray-300 px-3 py-1.5 dark:hover:bg-gray-600 hover:bg-gray-200 transition-colors">
+                          <span className="dark:text-white text-gray-900 font-bold text-xs">Clear All</span>
+                        </div>
+                      </button>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Permission Groups */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {permissionGroups.map(group => (
+                        <div key={group.title}>
+                          {/* Group Header */}
+                          <div className="mb-3">
+                            <div className={`pixel-corners-xs ${group.borderColor}`}>
+                              <div className={`pixel-corners-xs-content ${group.bgColor} px-3 py-2`}>
+                                <h5 className={`font-bold ${group.textColor}`}>{group.title}</h5>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Permissions List */}
+                          <div className="space-y-2.5">
+                            {group.permissions.map(perm => (
+                              <label
+                                key={perm.key}
+                                className="flex items-start gap-3 cursor-pointer group"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={rolePermissions[role.id]?.[perm.key as keyof typeof defaultPermissions] || false}
+                                  onChange={() => togglePermission(role.id, perm.key)}
+                                  className="mt-0.5 w-5 h-5 rounded accent-game-green-600 dark:accent-game-green-500 focus:ring-2 focus:ring-game-green-500 cursor-pointer flex-shrink-0"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-bold text-sm dark:text-white text-gray-900 dark:group-hover:text-game-green-400 group-hover:text-game-green-600 transition-colors">
+                                    {perm.label}
+                                  </div>
+                                  <div className="text-xs dark:text-gray-400 text-gray-600 mt-0.5">
+                                    {perm.description}
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
-                Select a role to configure permissions
-              </div>
-            )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="pixel-corners-sm dark:bg-game-red-900 bg-game-red-400">
+          <div className="pixel-corners-sm-content dark:bg-game-red-900/20 bg-game-red-100 p-4">
+            <p className="dark:text-game-red-500 text-game-red-900 text-sm font-bold">{error}</p>
           </div>
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 text-sm">{error}</p>
-        </div>
-      )}
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Tip:</strong> Users can have multiple Discord roles. They'll get all permissions from all their roles combined.
-        </p>
-      </div>
-
-      <div className="flex gap-4 pt-4 border-t">
+      {/* Navigation */}
+      <div className="flex gap-3 pt-4 border-t-2 dark:border-gray-700 border-gray-300">
         <button
           onClick={onBack}
           disabled={loading}
-          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="px-6 py-3 border-2 dark:border-gray-700 border-gray-300 rounded-chunky-sm dark:hover:bg-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 dark:text-white text-gray-900 font-bold"
         >
           Back
         </button>
         <button
           onClick={handleComplete}
           disabled={loading || !orgName.trim()}
-          className="flex-1 bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 px-6 py-3 bg-gradient-to-r from-game-green-600 to-game-green-700 text-white rounded-chunky-sm border-[3px] border-game-green-800 shadow-game-light hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105 font-bold"
         >
-          {loading ? 'Completing Setup...' : 'Complete Setup'}
+          {loading ? 'Completing Setup...' : 'Complete Setup →'}
         </button>
       </div>
     </div>

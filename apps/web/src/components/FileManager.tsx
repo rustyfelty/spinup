@@ -295,7 +295,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
             onClick={() => setMobileView('browser')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               mobileView === 'browser'
-                ? 'dark:text-white text-gray-900 dark:border-game-green-500 border-blue-600 border-b-2'
+                ? 'dark:text-white text-gray-900 dark:border-game-green-500 border-purple-600 border-b-2'
                 : 'dark:text-gray-400 text-gray-600'
             }`}
           >
@@ -305,7 +305,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
             onClick={() => setMobileView('viewer')}
             className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
               mobileView === 'viewer'
-                ? 'dark:text-white text-gray-900 dark:border-game-green-500 border-blue-600 border-b-2'
+                ? 'dark:text-white text-gray-900 dark:border-game-green-500 border-purple-600 border-b-2'
                 : 'dark:text-gray-400 text-gray-600'
             }`}
             disabled={!selectedFile}
@@ -399,7 +399,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
         <div className="px-3 py-2 dark:border-gray-700 border-b dark:bg-gray-800 bg-gray-50 flex items-center gap-1 text-sm overflow-x-auto">
           <button
             onClick={() => setCurrentPath(dataPath)}
-            className="dark:hover:text-game-green-400 hover:text-blue-600 font-medium dark:text-white"
+            className="dark:hover:text-game-green-400 hover:text-purple-600 font-medium dark:text-white"
           >
             {dataPath}
           </button>
@@ -408,7 +408,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
               <ChevronRight className="w-3 h-3 dark:text-gray-600 text-gray-400" />
               <button
                 onClick={() => setCurrentPath('/' + breadcrumbs.slice(0, i + 2).join('/'))}
-                className="dark:hover:text-game-green-400 hover:text-blue-600 dark:text-gray-300"
+                className="dark:hover:text-game-green-400 hover:text-purple-600 dark:text-gray-300"
               >
                 {crumb}
               </button>
@@ -440,7 +440,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
             <div
               key={file.path}
               className={`w-full px-3 py-3 sm:py-2 min-h-[48px] dark:hover:bg-gray-700/50 hover:bg-gray-50 flex items-center gap-2 text-sm dark:border-gray-700 border-b dark:text-gray-300 ${
-                selectedFile?.path === file.path ? 'bg-blue-50' : ''
+                selectedFile?.path === file.path ? 'bg-purple-50' : ''
               }`}
             >
               <button
@@ -451,7 +451,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 className="flex-shrink-0"
               >
                 {selectedFiles.has(file.path) ? (
-                  <CheckSquare className="w-4 h-4 text-blue-600" />
+                  <CheckSquare className="w-4 h-4 text-purple-600" />
                 ) : (
                   <Square className="w-4 h-4 dark:text-gray-500 text-gray-400" />
                 )}
@@ -461,11 +461,11 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 className="flex-1 flex items-center gap-2"
               >
                 {file.type === 'directory' ? (
-                  <Folder className="w-4 h-4 text-blue-500" />
+                  <Folder className="w-4 h-4 text-game-purple-500" />
                 ) : isImageFile(file.name) ? (
-                  <ImageIcon className="w-4 h-4 text-green-500" />
+                  <ImageIcon className="w-4 h-4 text-game-purple-500" />
                 ) : isArchiveFile(file.name) ? (
-                  <FileArchive className="w-4 h-4 text-purple-500" />
+                  <FileArchive className="w-4 h-4 text-game-purple-500" />
                 ) : (
                   <File className="w-4 h-4 dark:text-gray-500 text-gray-400" />
                 )}
@@ -521,7 +521,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                     {!isImageFile(selectedFile.name) && !isArchiveFile(selectedFile.name) && (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
+                        className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center justify-center gap-2 font-medium"
                       >
                         <Edit2 className="w-4 h-4" />
                         <span>Edit</span>
@@ -547,7 +547,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                     <button
                       onClick={handleSave}
                       disabled={writeMutation.isPending}
-                      className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 flex items-center justify-center gap-2 disabled:opacity-50 font-medium"
+                      className="flex-1 sm:flex-initial min-h-[44px] px-4 py-2 text-sm bg-game-purple-600 text-white rounded hover:bg-game-purple-700 flex items-center justify-center gap-2 disabled:opacity-50 font-medium"
                     >
                       <Save className="w-4 h-4" />
                       <span>Save</span>
@@ -575,7 +575,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 <textarea
                   value={editingContent}
                   onChange={(e) => setEditingContent(e.target.value)}
-                  className="w-full h-full font-mono text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white border rounded p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-full font-mono text-sm dark:bg-gray-800 dark:border-gray-700 dark:text-white border rounded p-3 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               ) : isImageFile(selectedFile.name) ? (
                 <div className="flex justify-center items-start">
@@ -619,7 +619,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateFile()}
                 placeholder="filename.txt"
-                className="w-full px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 autoFocus
               />
               <div className="flex justify-end gap-2">
@@ -635,7 +635,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 <button
                   onClick={handleCreateFile}
                   disabled={!newItemName.trim() || createFileMutation.isPending}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
                 >
                   Create
                 </button>
@@ -657,7 +657,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateDirectory()}
                 placeholder="dirname"
-                className="w-full px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 autoFocus
               />
               <div className="flex justify-end gap-2">
@@ -673,7 +673,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 <button
                   onClick={handleCreateDirectory}
                   disabled={!newItemName.trim() || createDirMutation.isPending}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
                 >
                   Create
                 </button>
@@ -698,7 +698,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
                 onChange={(e) => setNewItemName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateArchive()}
                 placeholder="archive.zip"
-                className="w-full px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 autoFocus
               />
               <div className="flex justify-end gap-2">
@@ -741,10 +741,10 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 {uploadProgress.status === 'uploading' && (
-                  <RefreshCw className="w-4 h-4 animate-spin text-blue-600" />
+                  <RefreshCw className="w-4 h-4 animate-spin text-game-purple-600" />
                 )}
                 {uploadProgress.status === 'complete' && (
-                  <CheckSquare className="w-4 h-4 text-green-600" />
+                  <CheckSquare className="w-4 h-4 text-game-purple-600" />
                 )}
                 {uploadProgress.status === 'error' && (
                   <X className="w-4 h-4 text-red-600" />
@@ -770,7 +770,7 @@ export default function FileManager({ serverId, gameKey }: FileManagerProps) {
             {uploadProgress.status === 'uploading' && (
               <div className="w-full dark:bg-gray-700 bg-gray-200 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress.progress}%` }}
                 />
               </div>

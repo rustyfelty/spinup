@@ -7,15 +7,16 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 interface DomainStepProps extends StepProps {}
 
 export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStepProps) {
-  const [webDomain, setWebDomain] = useState(
-    window.location.origin || 'https://daboyz.live'
-  );
-  const [apiDomain, setApiDomain] = useState(
-    import.meta.env.VITE_API_URL || 'https://daboyz.live'
-  );
+  // Extract hostname from origin (remove https://)
+  const defaultDomain = window.location.origin ? window.location.origin.replace(/^https?:\/\//, '') : '';
+
+  const [webDomain, setWebDomain] = useState(defaultDomain);
+  const [apiDomain, setApiDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showInstructions, setShowInstructions] = useState(true);
+  const [useSeparateApiDomain, setUseSeparateApiDomain] = useState(false);
+  const [hasConfiguredCallback, setHasConfiguredCallback] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const validateUrl = (url: string): boolean => {
     try {
@@ -26,38 +27,55 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
     }
   };
 
-  const redirectUri = apiDomain ? `${apiDomain}/api/sso/discord/login/callback` : '';
+  // Ensure URLs have https:// prefix
+  const normalizeUrl = (url: string): string => {
+    if (!url) return '';
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
+
+  // Use webDomain for API if not using separate domain
+  const normalizedWebDomain = normalizeUrl(webDomain);
+  const normalizedApiDomain = normalizeUrl(apiDomain);
+  const effectiveApiDomain = useSeparateApiDomain ? normalizedApiDomain : normalizedWebDomain;
+  const redirectUri = effectiveApiDomain ? `${effectiveApiDomain}/api/sso/discord/login/callback` : '';
 
   const handleContinue = async () => {
     setError(null);
 
     // Validate URLs
     if (!webDomain.trim()) {
-      setError('Web domain is required');
+      setError('Domain is required');
       return;
     }
 
-    if (!apiDomain.trim()) {
-      setError('API domain is required');
+    if (!validateUrl(normalizedWebDomain)) {
+      setError('Domain must be a valid URL (e.g., example.com)');
       return;
     }
 
-    if (!validateUrl(webDomain)) {
-      setError('Web domain must be a valid URL (e.g., https://daboyz.live)');
-      return;
-    }
+    // If using separate API domain, validate it
+    if (useSeparateApiDomain) {
+      if (!apiDomain.trim()) {
+        setError('API domain is required');
+        return;
+      }
 
-    if (!validateUrl(apiDomain)) {
-      setError('API domain must be a valid URL (e.g., https://daboyz.live)');
-      return;
+      if (!validateUrl(normalizedApiDomain)) {
+        setError('API domain must be a valid URL (e.g., api.example.com)');
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
       await axios.post(`${API_URL}/api/setup/configure-domains`, {
-        webDomain,
-        apiDomain
+        webDomain: normalizedWebDomain,
+        apiDomain: effectiveApiDomain
       });
 
       await refreshStatus();
@@ -70,175 +88,266 @@ export default function DomainStep({ onNext, onBack, refreshStatus }: DomainStep
   };
 
   return (
-    <div className="space-y-6">
-      {/* Discord Prerequisites */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg p-6">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="text-3xl">🎯</div>
-          <div className="flex-1">
-            <h4 className="text-lg font-bold text-blue-900 mb-2">
-              Discord Application Setup Required
-            </h4>
-            <p className="text-sm text-blue-800">
-              Before continuing, you must create and configure a Discord application.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-semibold px-3 py-1 rounded hover:bg-blue-100 transition-colors"
-          >
-            {showInstructions ? 'Hide' : 'Show'}
-          </button>
-        </div>
-
-        {showInstructions && (
-          <div className="space-y-4 text-sm">
-            <div className="bg-white rounded-lg p-4 border border-blue-200">
-              <p className="font-bold text-blue-900 mb-3">📝 Step 1: Create Discord Application</p>
-              <ol className="list-decimal list-inside space-y-2 ml-2 text-gray-700">
-                <li>
-                  Go to{' '}
-                  <a
-                    href="https://discord.com/developers/applications"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline hover:text-blue-800 font-semibold"
-                  >
-                    Discord Developer Portal ↗
-                  </a>
-                </li>
-                <li>Click <strong>"New Application"</strong></li>
-                <li>Enter a name (e.g., "SpinUp") and click <strong>"Create"</strong></li>
-              </ol>
-            </div>
-
-            <div className="bg-white rounded-lg p-4 border border-blue-200">
-              <p className="font-bold text-blue-900 mb-3">🔗 Step 2: Configure OAuth Redirect URI</p>
-              <ol className="list-decimal list-inside space-y-2 ml-2 text-gray-700">
-                <li>In your application, go to <strong>OAuth2</strong> → <strong>General</strong></li>
-                <li>Scroll to the <strong>"Redirects"</strong> section</li>
-                <li>Click <strong>"Add Redirect"</strong></li>
-                <li>
-                  Copy and paste this URL:
-                  <div className="mt-2 p-3 bg-gray-900 text-green-400 rounded font-mono text-xs break-all flex items-center justify-between gap-2">
-                    <span>{redirectUri || 'https://your-domain.com/api/sso/discord/login/callback'}</span>
-                    {redirectUri && (
-                      <button
-                        onClick={() => navigator.clipboard.writeText(redirectUri)}
-                        className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold whitespace-nowrap"
-                        title="Copy to clipboard"
-                      >
-                        Copy
-                      </button>
-                    )}
-                  </div>
-                </li>
-                <li>Click <strong>"Save Changes"</strong> at the bottom</li>
-              </ol>
-            </div>
-
-            <div className="bg-white rounded-lg p-4 border border-blue-200">
-              <p className="font-bold text-blue-900 mb-3">🔑 Step 3: Save Your Credentials</p>
-              <p className="text-gray-700 mb-2">You'll need these in the next step:</p>
-              <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700">
-                <li><strong>Client ID</strong> - found on the "General Information" page</li>
-                <li><strong>Client Secret</strong> - click "Reset Secret" on the OAuth2 page</li>
-              </ul>
-            </div>
-
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
-              <div className="flex items-start gap-2">
-                <span className="text-lg">⚠️</span>
-                <div>
-                  <p className="font-bold text-amber-900 text-xs mb-1">IMPORTANT:</p>
-                  <p className="text-xs text-amber-800">
-                    Enter your API domain below FIRST, then copy the redirect URI above.
-                    The redirect URI in Discord must <strong>exactly match</strong> what's shown above.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-8">
       {/* Domain Configuration */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Configure Domain Settings
+        <h3 className="text-2xl font-bold text-white mb-3 leading-relaxed">
+          Configure Domain
         </h3>
-        <p className="text-gray-600 mb-4">
-          Enter the public URLs where your SpinUp installation is accessible.
+        <p className="text-slate-300 dark:text-slate-400 text-base leading-relaxed">
+          Enter the public URL where your SpinUp installation is accessible.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* Web Domain */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Web App Domain <span className="text-red-500">*</span>
+          <label className="block text-sm font-bold text-slate-300 mb-2">
+            Domain <span className="text-red-500">*</span>
           </label>
-          <input
-            type="url"
-            value={webDomain}
-            onChange={(e) => setWebDomain(e.target.value)}
-            placeholder="https://daboyz.live"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            required
-          />
-          <p className="text-gray-500 text-xs mt-1">
-            The public URL where your web app is accessible
+
+          {/* Input group with pixel corners */}
+          <div className="pixel-corners-sm bg-gray-600/50">
+            <div className="pixel-corners-sm-content bg-slate-800/50 backdrop-blur-sm flex items-stretch overflow-hidden">
+              <div className="flex items-center px-3 bg-slate-700/50 border-r-2 border-slate-600">
+                <span className="text-slate-400 text-sm font-mono font-bold">https://</span>
+              </div>
+              <input
+                type="text"
+                value={webDomain}
+                onChange={(e) => setWebDomain(e.target.value)}
+                placeholder="example.com"
+                className="flex-1 px-4 py-2.5 bg-transparent text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-game-purple-500"
+                required
+                aria-label="Web domain"
+              />
+            </div>
+          </div>
+
+          <p className="text-slate-500 text-xs mt-2 ml-1">
+            The public URL where SpinUp is accessible
           </p>
         </div>
 
-        {/* API Domain */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            API Domain <span className="text-red-500">*</span>
-          </label>
+        {/* Simple Checkbox Toggle */}
+        <div className="flex items-center gap-2">
           <input
-            type="url"
-            value={apiDomain}
-            onChange={(e) => setApiDomain(e.target.value)}
-            placeholder="https://daboyz.live"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            required
+            type="checkbox"
+            id="useSeparateApiDomain"
+            checked={useSeparateApiDomain}
+            onChange={(e) => setUseSeparateApiDomain(e.target.checked)}
+            className="w-4 h-4 accent-game-purple-600 focus:ring-2 focus:ring-game-purple-500 cursor-pointer"
           />
-          <p className="text-gray-500 text-xs mt-1">
-            The public URL where your API is accessible (usually same as web domain)
-          </p>
+          <label htmlFor="useSeparateApiDomain" className="text-sm text-slate-400 cursor-pointer">
+            Use a different API domain (advanced)
+          </label>
         </div>
 
-        {/* Show generated redirect URI */}
-        {redirectUri && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <p className="text-xs font-semibold text-green-900 mb-1">✓ Redirect URI for Discord:</p>
-            <code className="text-xs text-green-800 break-all">{redirectUri}</code>
+        {/* API Domain - only show if checkbox is checked */}
+        {useSeparateApiDomain && (
+          <div>
+            <label className="block text-sm font-bold text-slate-300 mb-2">
+              API Domain <span className="text-red-500">*</span>
+            </label>
+
+            {/* Input group with pixel corners */}
+            <div className="pixel-corners-sm bg-gray-600/50">
+              <div className="pixel-corners-sm-content bg-slate-800/50 backdrop-blur-sm flex items-stretch overflow-hidden">
+                <div className="flex items-center px-3 bg-slate-700/50 border-r-2 border-slate-600">
+                  <span className="text-slate-400 text-sm font-mono font-bold">https://</span>
+                </div>
+                <input
+                  type="text"
+                  value={apiDomain}
+                  onChange={(e) => setApiDomain(e.target.value)}
+                  placeholder="api.example.com"
+                  className="flex-1 px-4 py-2.5 bg-transparent text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-game-purple-500"
+                  required
+                  aria-label="API domain"
+                />
+              </div>
+            </div>
+
+            <p className="text-slate-500 text-xs mt-2 ml-1">
+              The public URL where your API is accessible
+            </p>
           </div>
         )}
       </div>
 
+      {/* Discord Prerequisites */}
+      <div className="pixel-corners bg-purple-600/30 backdrop-blur-sm">
+        <div className="pixel-corners-content bg-gradient-to-br from-purple-950/50 to-indigo-950/50 backdrop-blur-sm p-6">
+
+        {/* Header */}
+        <div className="flex items-start gap-4 mb-4">
+          <div className="text-4xl flex-shrink-0">🎯</div>
+          <div className="flex-1">
+            <h4 className="text-lg font-bold text-purple-200 mb-2 leading-relaxed">
+              Discord Application Setup Required
+            </h4>
+            <p className="text-sm text-purple-300 leading-relaxed">
+              Before continuing, you must create and configure a Discord application.
+            </p>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="space-y-3">
+
+            {/* Step 1 */}
+            <div className="pixel-corners-sm bg-purple-600/30">
+              <div className="pixel-corners-sm-content bg-slate-800/50 backdrop-blur-sm p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="text-xl flex-shrink-0">📝</span>
+                  <p className="font-bold text-purple-300 text-sm">
+                    Step 1: Create Discord Application
+                  </p>
+                </div>
+                <ol className="list-decimal list-inside space-y-2 ml-2 text-slate-300">
+                  <li>
+                    Go to{' '}
+                    <a
+                      href="https://discord.com/developers/applications"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="pixel-corners-xs bg-purple-600 inline-block hover:shadow-lg hover:shadow-purple-600/30 transition-all"
+                    >
+                      <span className="pixel-corners-xs-content bg-purple-700 px-2 py-0.5 inline-block hover:bg-purple-600 transition-colors">
+                        <span className="text-white font-bold text-xs">Discord Developer Portal ↗</span>
+                      </span>
+                    </a>
+                  </li>
+                  <li>Click <strong className="text-white">"New Application"</strong></li>
+                  <li>Enter a name (e.g., "SpinUp") and click <strong className="text-white">"Create"</strong></li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Step 2 with improved copy button */}
+            <div className="pixel-corners-sm bg-purple-600/30">
+              <div className="pixel-corners-sm-content bg-slate-800/50 backdrop-blur-sm p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="text-xl flex-shrink-0">🔗</span>
+                  <p className="font-bold text-purple-300 text-sm">
+                    Step 2: Configure OAuth Redirect URI
+                  </p>
+                </div>
+                <ol className="list-decimal list-inside space-y-3 ml-2 text-slate-300">
+                  <li>In your application, go to <strong className="text-white">OAuth2</strong> → <strong className="text-white">General</strong></li>
+                  <li>Scroll to the <strong className="text-white">"Redirects"</strong> section</li>
+                  <li>Click <strong className="text-white">"Add Redirect"</strong></li>
+                  <li className="list-none -ml-2">
+                    <span className="text-slate-300">Copy and paste this URL:</span>
+
+                    {/* Enhanced copy-paste box */}
+                    <div className="mt-2 pixel-corners-xs bg-black/50">
+                      <div className="pixel-corners-xs-content bg-black/70 backdrop-blur-sm p-3 flex items-center justify-between gap-3">
+                        <code className="text-game-purple-400 font-mono text-xs break-all flex-1 leading-relaxed">
+                          {redirectUri || 'https://your-domain.com/api/sso/discord/login/callback'}
+                        </code>
+                        {redirectUri && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(redirectUri);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            }}
+                            className="pixel-corners-xs bg-game-purple-700 flex-shrink-0 hover:shadow-lg hover:shadow-game-purple-600/30 transition-all"
+                            aria-label={copied ? "Copied to clipboard" : "Copy redirect URI to clipboard"}
+                          >
+                            <div className="pixel-corners-xs-content bg-game-purple-600 px-3 py-1.5 hover:bg-game-purple-500 transition-colors">
+                              <span className="text-white font-bold text-xs whitespace-nowrap">
+                                {copied ? 'Copied!' : 'Copy'}
+                              </span>
+                            </div>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                  <li>Click <strong className="text-white">"Save Changes"</strong> at the bottom</li>
+                </ol>
+              </div>
+            </div>
+
+            {/* Warning box */}
+            <div className="pixel-corners-sm bg-amber-600/30 backdrop-blur-sm">
+              <div className="pixel-corners-sm-content bg-amber-900/30 backdrop-blur-sm p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">⚠️</span>
+                  <div>
+                    <p className="font-bold text-amber-300 text-sm mb-1.5">
+                      IMPORTANT:
+                    </p>
+                    <p className="text-xs text-amber-200 leading-relaxed">
+                      Make sure your domains above are correct before copying the redirect URI.
+                      The redirect URI in Discord must <strong>exactly match</strong> what's shown.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+        </div>
+      </div>
+
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 text-sm">{error}</p>
+        <div className="pixel-corners bg-red-600/30 backdrop-blur-sm shadow-lg shadow-red-600/20">
+          <div className="pixel-corners-content bg-red-900/30 backdrop-blur-sm p-4">
+          <p className="text-red-300 text-sm font-bold">{error}</p>
+          </div>
         </div>
       )}
 
-      <div className="flex gap-4 pt-4 border-t">
-        <button
-          onClick={onBack}
-          disabled={loading}
-          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          Back
-        </button>
-        <button
-          onClick={handleContinue}
-          disabled={loading || !webDomain.trim() || !apiDomain.trim()}
-          className="flex-1 bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading ? 'Saving...' : 'Continue'}
-        </button>
+      {/* Confirmation Checkbox */}
+      <div className="pixel-corners-sm bg-purple-600/20 backdrop-blur-sm">
+        <div className="pixel-corners-sm-content bg-purple-900/20 backdrop-blur-sm p-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hasConfiguredCallback}
+              onChange={(e) => setHasConfiguredCallback(e.target.checked)}
+              className="mt-0.5 w-5 h-5 accent-game-purple-600 focus:ring-2 focus:ring-game-purple-500 cursor-pointer flex-shrink-0"
+              aria-label="Confirm OAuth redirect URI configured"
+            />
+            <div className="flex-1">
+              <span className="text-sm font-bold text-purple-300 block">
+                I have configured the OAuth redirect URI in Discord <span className="text-red-400">*</span>
+              </span>
+              <p className="text-xs text-purple-400 mt-1">
+                Confirm that you've added the redirect URI to your Discord application settings
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Improved Navigation Buttons */}
+      <div className="flex justify-between gap-4 pt-6 border-t-2 border-slate-700">
+        <div className="pixel-corners-sm bg-gray-600/50 hover:shadow-lg hover:shadow-gray-600/20 transition-all">
+          <button
+            onClick={onBack}
+            disabled={loading}
+            className="pixel-corners-sm-content bg-slate-700/50 backdrop-blur-sm px-6 py-3 hover:bg-slate-600/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Go back to previous step"
+          >
+            <span className="text-white font-bold text-sm">
+              ← Back
+            </span>
+          </button>
+        </div>
+
+        <div className="pixel-corners bg-game-purple-600 hover:shadow-lg hover:shadow-game-purple-600/30 transition-all">
+          <button
+            onClick={handleContinue}
+            disabled={loading || !webDomain.trim() || (useSeparateApiDomain && !apiDomain.trim()) || !hasConfiguredCallback}
+            className="pixel-corners-content px-8 py-3 bg-gradient-to-r from-game-purple-600 to-game-purple-700 text-white font-bold hover:from-game-purple-700 hover:to-game-purple-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+            aria-label="Continue to next step"
+          >
+            {loading ? '⏳ Saving...' : 'Continue →'}
+          </button>
+        </div>
       </div>
     </div>
   );

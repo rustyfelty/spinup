@@ -89,8 +89,10 @@ export default function DiscordIntegration() {
                 onClick={() => navigate('/')}
                 className="flex items-center space-x-3 group"
               >
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl group-hover:scale-105 transition-transform">
-                  <ArrowLeft className="w-5 h-5 text-white" />
+                <div className="pixel-corners-sm bg-gradient-to-br from-purple-500 to-indigo-600">
+                  <div className="pixel-corners-sm-content p-2 bg-gradient-to-br from-purple-500 to-indigo-600 group-hover:scale-105 transition-transform">
+                    <ArrowLeft className="w-5 h-5 text-white" />
+                  </div>
                 </div>
                 <span className="text-gray-600 group-hover:text-gray-900 transition-colors">Back to Dashboard</span>
               </button>
@@ -102,8 +104,10 @@ export default function DiscordIntegration() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-6">
-            <MessageSquare className="w-10 h-10 text-white" />
+          <div className="pixel-corners-sm bg-gradient-to-br from-indigo-500 to-purple-600 mb-6 inline-block">
+            <div className="pixel-corners-sm-content inline-flex items-center justify-center p-3 bg-gradient-to-br from-indigo-500 to-purple-600">
+              <MessageSquare className="w-10 h-10 text-white" />
+            </div>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Connect Discord to SpinUp
@@ -116,18 +120,23 @@ export default function DiscordIntegration() {
         {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {features.map((feature, index) => (
-            <div key={index} className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg transition-all hover:scale-105">
-              <div className="p-3 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl w-fit mb-4">
-                <div className="text-indigo-600">{feature.icon}</div>
+            <div key={index} className="pixel-corners border-gray-200">
+              <div className="pixel-corners-content bg-white p-6 hover:shadow-lg transition-all hover:scale-105">
+                <div className="pixel-corners-sm bg-gradient-to-br from-indigo-50 to-purple-50 w-fit mb-4">
+                  <div className="pixel-corners-sm-content p-3 bg-gradient-to-br from-indigo-50 to-purple-50">
+                    <div className="text-indigo-600">{feature.icon}</div>
+                  </div>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-600">{feature.desc}</p>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
-              <p className="text-sm text-gray-600">{feature.desc}</p>
             </div>
           ))}
         </div>
 
         {/* Setup Steps */}
-        <div className="bg-white rounded-2xl p-8 border border-gray-200 mb-12">
+        <div className="pixel-corners border-gray-200 mb-12">
+          <div className="pixel-corners-content bg-white p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Setup</h2>
 
           <div className="space-y-6">
@@ -143,21 +152,25 @@ export default function DiscordIntegration() {
                   <h3 className="font-semibold text-gray-900 mb-1">{step.title}</h3>
                   <p className="text-gray-600 mb-3">{step.description}</p>
                   {activeStep === step.number && !step.completed && (
-                    <button
-                      onClick={step.number === 1 ? handleAddBot : undefined}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                      {step.action}
-                    </button>
+                    <div className="pixel-corners-xs bg-purple-700">
+                      <button
+                        onClick={step.number === 1 ? handleAddBot : undefined}
+                        className="pixel-corners-xs-content px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                      >
+                        {step.action}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
+          </div>
         </div>
 
         {/* Commands Reference */}
-        <div className="bg-white rounded-2xl p-8 border border-gray-200">
+        <div className="pixel-corners border-gray-200">
+          <div className="pixel-corners-content bg-white p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Available Commands</h2>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -168,7 +181,8 @@ export default function DiscordIntegration() {
 
           <div className="space-y-4">
             {commands.map((cmd, index) => (
-              <div key={index} className="border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition-colors">
+              <div key={index} className="pixel-corners-sm border-gray-200">
+                <div className="pixel-corners-sm-content p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-grow">
                     <div className="flex items-center space-x-2 mb-2">
@@ -183,28 +197,35 @@ export default function DiscordIntegration() {
                       <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{cmd.example}</code>
                     </div>
                   </div>
-                  <button
-                    onClick={() => copyToClipboard(cmd.example, `cmd-${index}`)}
-                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                  >
-                    {copySuccess === `cmd-${index}` ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-gray-400" />
-                    )}
-                  </button>
+                  <div className="pixel-corners-xs bg-gray-300">
+                    <button
+                      onClick={() => copyToClipboard(cmd.example, `cmd-${index}`)}
+                      className="pixel-corners-xs-content p-2 hover:bg-gray-200 transition-colors"
+                    >
+                      {copySuccess === `cmd-${index}` ? (
+                        <Check className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                </div>
                 </div>
               </div>
             ))}
           </div>
+          </div>
         </div>
 
         {/* Magic Link Info */}
-        <div className="mt-12 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-8 border border-purple-200">
-          <div className="flex items-start space-x-4">
-            <div className="p-3 bg-white rounded-xl">
-              <Sparkles className="w-6 h-6 text-purple-600" />
-            </div>
+        <div className="pixel-corners border-purple-200 mt-12">
+          <div className="pixel-corners-content bg-gradient-to-r from-purple-50 to-indigo-50 p-8">
+            <div className="flex items-start space-x-4">
+              <div className="pixel-corners-sm bg-white">
+                <div className="pixel-corners-sm-content p-3 bg-white">
+                  <Sparkles className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Magic Link Authentication</h3>
               <p className="text-gray-600 mb-4">
@@ -225,6 +246,7 @@ export default function DiscordIntegration() {
                   <span>Single use</span>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>

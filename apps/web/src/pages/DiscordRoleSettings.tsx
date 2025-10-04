@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, authApi } from '../lib/api';
+import ThemeToggle from '../components/ThemeToggle';
 
 interface DiscordRole {
   id: string;
@@ -36,45 +37,60 @@ interface RolePermissions {
 const permissionGroups = [
   {
     title: 'Server Management',
+    borderColor: 'dark:bg-purple-700 bg-purple-400',
+    bgColor: 'dark:bg-purple-600 bg-purple-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canCreateServer', label: 'Create Servers', description: 'Create new game servers' },
-      { key: 'canDeleteServer', label: 'Delete Servers', description: 'Permanently delete servers' },
-      { key: 'canStartServer', label: 'Start Servers', description: 'Start stopped servers' },
-      { key: 'canStopServer', label: 'Stop Servers', description: 'Stop running servers' },
-      { key: 'canRestartServer', label: 'Restart Servers', description: 'Restart servers' }
+      { key: 'canCreateServer', label: 'Create', description: 'Create new game servers' },
+      { key: 'canStartServer', label: 'Start', description: 'Start stopped servers' },
+      { key: 'canStopServer', label: 'Stop', description: 'Stop running servers' },
+      { key: 'canRestartServer', label: 'Restart', description: 'Restart servers' },
+      { key: 'canDeleteServer', label: 'Delete', description: 'Permanently delete servers' }
     ]
   },
   {
     title: 'Configuration',
+    borderColor: 'dark:bg-purple-800 bg-purple-400',
+    bgColor: 'dark:bg-purple-700 bg-purple-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canEditConfig', label: 'Edit Config Files', description: 'Modify server.properties and configs' },
-      { key: 'canEditFiles', label: 'Edit Server Files', description: 'Upload/edit/delete files' },
+      { key: 'canEditConfig', label: 'Edit Config', description: 'Modify server configs' },
+      { key: 'canEditFiles', label: 'Edit Files', description: 'Upload/edit/delete files' },
       { key: 'canInstallMods', label: 'Install Mods', description: 'Add plugins and mods' }
     ]
   },
   {
     title: 'Backups',
+    borderColor: 'dark:bg-amber-700 bg-amber-400',
+    bgColor: 'dark:bg-amber-600 bg-amber-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canCreateBackup', label: 'Create Backups', description: 'Make server backups' },
-      { key: 'canRestoreBackup', label: 'Restore Backups', description: 'Restore from backups' },
-      { key: 'canDeleteBackup', label: 'Delete Backups', description: 'Remove backups' }
+      { key: 'canCreateBackup', label: 'Create', description: 'Make server backups' },
+      { key: 'canRestoreBackup', label: 'Restore', description: 'Restore from backups' },
+      { key: 'canDeleteBackup', label: 'Delete', description: 'Remove backups' }
     ]
   },
   {
     title: 'Monitoring',
+    borderColor: 'dark:bg-green-700 bg-green-400',
+    bgColor: 'dark:bg-green-600 bg-green-500',
+    textColor: 'text-white',
     permissions: [
       { key: 'canViewLogs', label: 'View Logs', description: 'Read server logs' },
       { key: 'canViewMetrics', label: 'View Metrics', description: 'See CPU, RAM, player count' },
-      { key: 'canViewConsole', label: 'View Console', description: 'View live server console' },
-      { key: 'canExecuteCommands', label: 'Execute Commands', description: 'Run console commands' }
+      { key: 'canViewConsole', label: 'Console', description: 'View live server console' },
+      { key: 'canExecuteCommands', label: 'Commands', description: 'Run console commands' }
     ]
   },
   {
     title: 'Administration',
+    borderColor: 'dark:bg-red-700 bg-red-400',
+    bgColor: 'dark:bg-red-600 bg-red-500',
+    textColor: 'text-white',
     permissions: [
-      { key: 'canManageMembers', label: 'Manage Members', description: 'Add/remove team members' },
-      { key: 'canManageRoles', label: 'Manage Roles', description: 'Edit role permissions' },
-      { key: 'canManageSettings', label: 'Manage Settings', description: 'Change organization settings' }
+      { key: 'canManageMembers', label: 'Members', description: 'Add/remove team members' },
+      { key: 'canManageRoles', label: 'Roles', description: 'Edit role permissions' },
+      { key: 'canManageSettings', label: 'Settings', description: 'Change organization settings' }
     ]
   }
 ];
@@ -104,7 +120,6 @@ export default function DiscordRoleSettings() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -168,8 +183,8 @@ export default function DiscordRoleSettings() {
         }
       });
 
-      // Merge existing permissions with newly synced roles
-      setRolePermissions(prev => ({ ...permsMap, ...prev }));
+      // Set permissions from database (this takes precedence over synced defaults)
+      setRolePermissions(permsMap);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load Discord configuration');
     } finally {
@@ -178,31 +193,19 @@ export default function DiscordRoleSettings() {
   };
 
   const syncRolesFromDiscord = async () => {
-    try {
-      setSyncing(true);
-      setError(null);
+    const { data } = await api.post(`/api/org/${orgId}/discord/sync-roles`);
 
-      const { data } = await api.post(`/api/org/${orgId}/discord/sync-roles`);
+    const newRoles = data.roles as DiscordRole[];
+    setAvailableRoles(newRoles);
 
-      const newRoles = data.roles as DiscordRole[];
-      setAvailableRoles(newRoles);
-
-      // Initialize permissions for new roles
-      const updatedPerms = { ...rolePermissions };
-      newRoles.forEach(role => {
-        if (!updatedPerms[role.id]) {
-          updatedPerms[role.id] = { ...defaultPermissions };
-        }
-      });
-      setRolePermissions(updatedPerms);
-
-      setSuccess('Roles synced from Discord successfully');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to sync roles from Discord');
-    } finally {
-      setSyncing(false);
-    }
+    // Initialize permissions for new roles
+    const updatedPerms = { ...rolePermissions };
+    newRoles.forEach(role => {
+      if (!updatedPerms[role.id]) {
+        updatedPerms[role.id] = { ...defaultPermissions };
+      }
+    });
+    setRolePermissions(updatedPerms);
   };
 
   const togglePermission = (roleId: string, permission: string) => {
@@ -286,23 +289,25 @@ export default function DiscordRoleSettings() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white">Loading Discord settings...</div>
+      <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="dark:text-white text-gray-900 font-bold">Loading Discord settings...</div>
       </div>
     );
   }
 
   if (!orgId) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-400 mb-4">No organization found</p>
-          <button
-            onClick={() => navigate('/')}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            Go to Dashboard
-          </button>
+          <p className="dark:text-game-red-500 text-game-red-700 mb-4 font-bold">No organization found</p>
+          <div className="pixel-corners-sm border-game-green-700 inline-block">
+            <button
+              onClick={() => navigate('/')}
+              className="pixel-corners-sm-content px-4 py-2 bg-game-green-600 hover:bg-game-green-700 text-white shadow-game-sm font-bold"
+            >
+              Go to Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -312,27 +317,31 @@ export default function DiscordRoleSettings() {
   const currentPermissions = selectedRole ? rolePermissions[selectedRole] : null;
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
+      <header className="dark:bg-gray-800/95 bg-white dark:border-gray-700 border-b-2 border-gray-300 shadow-game-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/settings')}
-                className="text-gray-400 hover:text-white transition"
-              >
-                ← Back to Settings
-              </button>
-              <h1 className="text-2xl font-bold text-white">Discord Role Permissions</h1>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition dark:hover:bg-gray-700 hover:bg-gray-100 text-sm sm:text-base whitespace-nowrap"
+                >
+                  ← Back
+                </button>
+              </div>
+              <h1 className="text-base sm:text-lg md:text-xl font-pixel dark:text-white text-gray-900">Role Permissions</h1>
             </div>
-            <button
-              onClick={syncRolesFromDiscord}
-              disabled={syncing}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg text-sm font-medium transition"
-            >
-              {syncing ? 'Syncing...' : 'Sync Roles from Discord'}
-            </button>
+            <div className="pixel-corners-sm border-game-green-700 w-full sm:w-auto">
+              <button
+                onClick={handleSave}
+                disabled={saving || availableRoles.length === 0}
+                className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white text-sm sm:text-base transition disabled:cursor-not-allowed shadow-game-sm whitespace-nowrap"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -340,52 +349,66 @@ export default function DiscordRoleSettings() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {guildName && (
-          <div className="mb-6 bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <p className="text-gray-400 text-sm">
-              Configuring roles for: <span className="text-white font-semibold">{guildName}</span>
-            </p>
+          <div className="pixel-corners-sm dark:border-gray-700 border-gray-300 mb-6">
+            <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-4 shadow-game-light">
+              <p className="dark:text-gray-400 text-gray-600 text-sm">
+                Configuring roles for: <span className="dark:text-white text-gray-900 font-bold">{guildName}</span>
+              </p>
+            </div>
           </div>
         )}
 
         {error && (
-          <div className="mb-6 bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="pixel-corners-sm dark:border-game-red-900 border-game-red-400 mb-6">
+            <div className="pixel-corners-sm-content dark:bg-game-red-900/20 bg-game-red-100 p-4">
+              <p className="dark:text-game-red-500 text-game-red-900 text-sm font-bold">{error}</p>
+            </div>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-            <p className="text-green-400 text-sm">{success}</p>
+          <div className="pixel-corners-sm dark:border-green-800 border-green-300 mb-6">
+            <div className="pixel-corners-sm-content dark:bg-green-900/20 bg-green-50 p-4">
+              <p className="dark:text-green-400 text-green-800 text-sm font-bold">{success}</p>
+            </div>
           </div>
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Role List */}
           <div className="lg:col-span-1 space-y-2">
-            <h2 className="text-white font-semibold mb-3">Discord Roles</h2>
+            <h2 className="dark:text-white text-gray-900 font-bold mb-3 text-sm sm:text-base">Discord Roles</h2>
             {availableRoles.length === 0 ? (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                <p className="text-gray-400 text-sm">No roles configured. Sync roles from Discord to get started.</p>
+              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-4">
+                  <p className="dark:text-gray-400 text-gray-600 text-sm">No roles configured. Sync roles from Discord to get started.</p>
+                </div>
               </div>
             ) : (
               availableRoles.map((role) => (
-                <button
-                  key={role.id}
-                  onClick={() => setSelectedRole(role.id)}
-                  className={`w-full p-3 rounded-lg text-left transition-all ${
-                    selectedRole === role.id
-                      ? 'bg-gray-700 border-2 border-blue-500'
-                      : 'bg-gray-800 border-2 border-gray-700 hover:border-gray-600'
-                  }`}
-                >
+                <div className={`pixel-corners-sm ${
+                  selectedRole === role.id
+                    ? 'border-game-green-500'
+                    : 'dark:border-gray-700 border-gray-300'
+                }`}>
+                  <button
+                    key={role.id}
+                    onClick={() => setSelectedRole(role.id)}
+                    className={`pixel-corners-sm-content w-full p-3 text-left transition-all font-bold ${
+                      selectedRole === role.id
+                        ? 'dark:bg-gray-700 bg-gray-200 shadow-game-sm'
+                        : 'dark:bg-gray-800 bg-white dark:hover:border-gray-600 hover:border-gray-400 shadow-game-light'
+                    }`}
+                  >
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-3 h-3 rounded-full flex-shrink-0 border-2 dark:border-gray-600 border-gray-400"
                       style={{ backgroundColor: getRoleColor(role.color) }}
                     />
-                    <span className="font-medium text-sm text-white truncate">{role.name}</span>
+                    <span className="font-bold text-sm dark:text-white text-gray-900 truncate">{role.name}</span>
                   </div>
-                </button>
+                  </button>
+                </div>
               ))
             )}
           </div>
@@ -393,50 +416,68 @@ export default function DiscordRoleSettings() {
           {/* Permission Checkboxes */}
           <div className="lg:col-span-2">
             {currentRole && currentPermissions ? (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-700">
+              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-6 shadow-game-light">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 pb-4 border-b-2 dark:border-gray-700 border-gray-300">
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-4 h-4 rounded-full"
+                      className="w-4 h-4 rounded-full border-2 dark:border-gray-600 border-gray-400 flex-shrink-0"
                       style={{ backgroundColor: getRoleColor(currentRole.color) }}
                     />
-                    <h2 className="text-lg font-semibold text-white">{currentRole.name}</h2>
+                    <h2 className="text-base sm:text-lg font-bold dark:text-white text-gray-900 truncate">{currentRole.name}</h2>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => selectAllForRole(selectedRole)}
-                      className="px-3 py-1 text-xs font-medium text-blue-400 bg-blue-500/10 border border-blue-500/20 rounded hover:bg-blue-500/20 transition"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={() => removeAllForRole(selectedRole)}
-                      className="px-3 py-1 text-xs font-medium text-gray-400 bg-gray-700 border border-gray-600 rounded hover:bg-gray-600 transition"
-                    >
-                      Remove All
-                    </button>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <div className="pixel-corners-xs dark:bg-game-green-700 bg-game-green-600 flex-1 sm:flex-none">
+                      <button
+                        onClick={() => selectAllForRole(selectedRole)}
+                        className="pixel-corners-xs-content dark:bg-game-green-600 bg-game-green-500 px-3 py-1.5 dark:hover:bg-game-green-500 hover:bg-game-green-400 transition-colors w-full"
+                      >
+                        <span className="text-white font-bold text-xs whitespace-nowrap">Select All</span>
+                      </button>
+                    </div>
+                    <div className="pixel-corners-xs dark:bg-gray-600 bg-gray-400 flex-1 sm:flex-none">
+                      <button
+                        onClick={() => removeAllForRole(selectedRole)}
+                        className="pixel-corners-xs-content dark:bg-gray-700 bg-gray-300 px-3 py-1.5 dark:hover:bg-gray-600 hover:bg-gray-200 transition-colors w-full"
+                      >
+                        <span className="dark:text-white text-gray-900 font-bold text-xs whitespace-nowrap">Clear All</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {permissionGroups.map((group) => (
                     <div key={group.title}>
-                      <h3 className="text-sm font-semibold text-gray-300 mb-3">{group.title}</h3>
-                      <div className="space-y-2">
+                      {/* Group Header */}
+                      <div className="mb-3">
+                        <div className={`pixel-corners-xs ${group.borderColor}`}>
+                          <div className={`pixel-corners-xs-content ${group.bgColor} px-3 py-2`}>
+                            <h5 className={`font-bold ${group.textColor}`}>{group.title}</h5>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Permissions List */}
+                      <div className="space-y-2.5">
                         {group.permissions.map((perm) => (
                           <label
                             key={perm.key}
-                            className="flex items-start gap-3 p-2 rounded hover:bg-gray-700/50 cursor-pointer transition"
+                            className="flex items-start gap-3 cursor-pointer group"
                           >
                             <input
                               type="checkbox"
                               checked={currentPermissions[perm.key as keyof typeof currentPermissions]}
                               onChange={() => togglePermission(selectedRole, perm.key)}
-                              className="mt-1 w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                              className="mt-0.5 w-5 h-5 rounded accent-game-green-600 dark:accent-game-green-500 focus:ring-2 focus:ring-game-green-500 cursor-pointer flex-shrink-0"
                             />
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-white">{perm.label}</p>
-                              <p className="text-xs text-gray-400">{perm.description}</p>
+                              <div className="font-bold text-sm dark:text-white text-gray-900 dark:group-hover:text-game-green-400 group-hover:text-game-green-600 transition-colors">
+                                {perm.label}
+                              </div>
+                              <div className="text-xs dark:text-gray-400 text-gray-600 mt-0.5">
+                                {perm.description}
+                              </div>
                             </div>
                           </label>
                         ))}
@@ -444,30 +485,16 @@ export default function DiscordRoleSettings() {
                     </div>
                   ))}
                 </div>
+                </div>
               </div>
             ) : (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 text-center">
-                <p className="text-gray-400">Select a role to configure permissions</p>
+              <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
+                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-6 text-center shadow-game-light">
+                  <p className="dark:text-gray-400 text-gray-600">Select a role to configure permissions</p>
+                </div>
               </div>
             )}
           </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-6 mt-6 border-t border-gray-700">
-          <button
-            onClick={() => navigate('/settings')}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || availableRoles.length === 0}
-            className="flex-1 px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg font-medium transition disabled:cursor-not-allowed"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
         </div>
       </main>
     </div>

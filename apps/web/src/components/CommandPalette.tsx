@@ -161,7 +161,7 @@ export default function CommandPalette({
         id: `restart-${server.id}`,
         label: `Restart ${server.name}`,
         description: 'Restart this server',
-        icon: <RotateCw className="w-4 h-4 text-blue-600" />,
+        icon: <RotateCw className="w-4 h-4 text-purple-600" />,
         action: () => {
           onClose();
           onStopServer(server.id);
@@ -226,7 +226,8 @@ export default function CommandPalette({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start justify-center z-50 p-4 pt-32">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden">
+      <div className="pixel-corners bg-gray-300 max-w-2xl w-full shadow-2xl">
+        <div className="pixel-corners-content bg-white overflow-hidden">
         {/* Search Input */}
         <div className="flex items-center px-4 py-3 border-b border-gray-200">
           <Search className="w-5 h-5 text-gray-400 mr-3" />
@@ -238,8 +239,8 @@ export default function CommandPalette({
             className="flex-1 outline-none text-gray-900 placeholder-gray-400"
             autoFocus
           />
-          <div className="flex items-center space-x-2 text-xs text-gray-400">
-            <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">ESC</kbd>
+          <div className="flex items-center space-x-2 text-xs dark:text-gray-400 text-gray-500">
+            <kbd className="px-2 py-1 dark:bg-gray-700 dark:border-gray-600 bg-gray-100 rounded border border-gray-300">ESC</kbd>
             <span>to close</span>
           </div>
         </div>
@@ -264,7 +265,7 @@ export default function CommandPalette({
                       : 'hover:bg-gray-50 border-l-4 border-transparent'
                   }`}
                 >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 mr-3">
+                  <div className="flex items-center justify-center w-8 h-8 rounded dark:bg-gray-700 bg-gray-100 mr-3">
                     {cmd.icon}
                   </div>
                   <div className="flex-1">
@@ -274,7 +275,7 @@ export default function CommandPalette({
                     )}
                   </div>
                   {index === selectedIndex && (
-                    <kbd className="px-2 py-1 text-xs bg-gray-100 rounded border border-gray-300">
+                    <kbd className="px-2 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 bg-gray-100 rounded border border-gray-300">
                       ↵
                     </kbd>
                   )}
@@ -285,19 +286,20 @@ export default function CommandPalette({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex items-center justify-between">
+        <div className="px-4 py-2 border-t dark:border-gray-700 border-gray-200 dark:bg-gray-800 bg-gray-50 text-xs dark:text-gray-400 text-gray-500 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <span className="flex items-center space-x-1">
-              <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-300">↑</kbd>
-              <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-300">↓</kbd>
+              <kbd className="px-1.5 py-0.5 dark:bg-gray-700 dark:border-gray-600 bg-white rounded border border-gray-300">↑</kbd>
+              <kbd className="px-1.5 py-0.5 dark:bg-gray-700 dark:border-gray-600 bg-white rounded border border-gray-300">↓</kbd>
               <span>to navigate</span>
             </span>
             <span className="flex items-center space-x-1">
-              <kbd className="px-1.5 py-0.5 bg-white rounded border border-gray-300">↵</kbd>
+              <kbd className="px-1.5 py-0.5 dark:bg-gray-700 dark:border-gray-600 bg-white rounded border border-gray-300">↵</kbd>
               <span>to select</span>
             </span>
           </div>
           <span>{filteredCommands.length} commands</span>
+        </div>
         </div>
       </div>
     </div>
