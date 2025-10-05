@@ -37,8 +37,8 @@ interface RolePermissions {
 const permissionGroups = [
   {
     title: 'Server Management',
-    borderColor: 'dark:bg-purple-700 bg-purple-400',
-    bgColor: 'dark:bg-purple-600 bg-purple-500',
+    borderColor: 'dark:bg-game-primary-700 bg-game-primary-400',
+    bgColor: 'dark:bg-game-primary-600 bg-game-primary-500',
     textColor: 'text-white',
     permissions: [
       { key: 'canCreateServer', label: 'Create', description: 'Create new game servers' },
@@ -50,8 +50,8 @@ const permissionGroups = [
   },
   {
     title: 'Configuration',
-    borderColor: 'dark:bg-purple-800 bg-purple-400',
-    bgColor: 'dark:bg-purple-700 bg-purple-500',
+    borderColor: 'dark:bg-game-primary-800 bg-game-primary-400',
+    bgColor: 'dark:bg-game-primary-700 bg-game-primary-500',
     textColor: 'text-white',
     permissions: [
       { key: 'canEditConfig', label: 'Edit Config', description: 'Modify server configs' },
@@ -136,6 +136,13 @@ export default function DiscordRoleSettings() {
   });
 
   const orgId = authData?.org?.id;
+
+  // Redirect if user doesn't have admin access
+  useEffect(() => {
+    if (authData && authData.role !== 'OWNER' && authData.role !== 'ADMIN' && !authData.isDiscordOwner) {
+      navigate('/');
+    }
+  }, [authData, navigate]);
 
   useEffect(() => {
     if (orgId) {
@@ -319,25 +326,25 @@ export default function DiscordRoleSettings() {
   return (
     <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="dark:bg-gray-800/95 bg-white dark:border-gray-700 border-b-2 border-gray-300 shadow-game-sm">
+      <header className="dark:bg-gray-800/80 bg-white/90 backdrop-blur-md dark:border-gray-700 border-b-2 border-gray-300 sticky top-0 z-40 shadow-game-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
                 <button
                   onClick={() => navigate('/settings')}
-                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition dark:hover:bg-gray-700 hover:bg-gray-100 text-sm sm:text-base whitespace-nowrap"
+                  className="pixel-corners-sm-content px-3 sm:px-4 py-2 dark:text-gray-300 text-gray-700 dark:hover:text-white hover:text-black transition dark:hover:bg-gray-700 hover:bg-gray-100 text-sm sm:text-base whitespace-nowrap shadow-game-sm"
                 >
                   ← Back
                 </button>
               </div>
               <h1 className="text-base sm:text-lg md:text-xl font-pixel dark:text-white text-gray-900">Role Permissions</h1>
             </div>
-            <div className="pixel-corners-sm border-game-green-700 w-full sm:w-auto">
+            <div className="pixel-corners-sm dark:bg-game-green-700 bg-game-green-600 shadow-game-sm hover:shadow-game transition-all w-full sm:w-auto">
               <button
                 onClick={handleSave}
                 disabled={saving || availableRoles.length === 0}
-                className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white text-sm sm:text-base transition disabled:cursor-not-allowed shadow-game-sm whitespace-nowrap"
+                className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 dark:bg-game-green-600 bg-game-green-500 hover:bg-game-green-700 dark:hover:bg-game-green-500 disabled:bg-game-green-600/50 text-white text-sm sm:text-base transition disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
@@ -350,7 +357,7 @@ export default function DiscordRoleSettings() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {guildName && (
           <div className="pixel-corners-sm dark:border-gray-700 border-gray-300 mb-6">
-            <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-4 shadow-game-light">
+            <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm p-4 shadow-game">
               <p className="dark:text-gray-400 text-gray-600 text-sm">
                 Configuring roles for: <span className="dark:text-white text-gray-900 font-bold">{guildName}</span>
               </p>
@@ -380,24 +387,23 @@ export default function DiscordRoleSettings() {
             <h2 className="dark:text-white text-gray-900 font-bold mb-3 text-sm sm:text-base">Discord Roles</h2>
             {availableRoles.length === 0 ? (
               <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-4">
+                <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm p-4">
                   <p className="dark:text-gray-400 text-gray-600 text-sm">No roles configured. Sync roles from Discord to get started.</p>
                 </div>
               </div>
             ) : (
               availableRoles.map((role) => (
-                <div className={`pixel-corners-sm ${
+                <div key={role.id} className={`pixel-corners-sm ${
                   selectedRole === role.id
-                    ? 'border-game-green-500'
+                    ? 'dark:border-game-primary-500 border-game-primary-600'
                     : 'dark:border-gray-700 border-gray-300'
                 }`}>
                   <button
-                    key={role.id}
                     onClick={() => setSelectedRole(role.id)}
                     className={`pixel-corners-sm-content w-full p-3 text-left transition-all font-bold ${
                       selectedRole === role.id
-                        ? 'dark:bg-gray-700 bg-gray-200 shadow-game-sm'
-                        : 'dark:bg-gray-800 bg-white dark:hover:border-gray-600 hover:border-gray-400 shadow-game-light'
+                        ? 'dark:bg-gray-700/80 bg-gray-200 backdrop-blur-sm shadow-game'
+                        : 'dark:bg-gray-800/50 bg-white backdrop-blur-sm dark:hover:border-gray-600 hover:border-gray-400 shadow-game-sm'
                     }`}
                   >
                   <div className="flex items-center gap-2">
@@ -417,7 +423,7 @@ export default function DiscordRoleSettings() {
           <div className="lg:col-span-2">
             {currentRole && currentPermissions ? (
               <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-6 shadow-game-light">
+                <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm p-6 shadow-game">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 pb-4 border-b-2 dark:border-gray-700 border-gray-300">
                   <div className="flex items-center gap-3">
                     <div
@@ -489,7 +495,7 @@ export default function DiscordRoleSettings() {
               </div>
             ) : (
               <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white p-6 text-center shadow-game-light">
+                <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm p-6 text-center shadow-game">
                   <p className="dark:text-gray-400 text-gray-600">Select a role to configure permissions</p>
                 </div>
               </div>

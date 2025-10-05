@@ -325,20 +325,49 @@ export const serverRoutes: FastifyPluginCallback = (fastify, opts, done) => {
 
   /**
    * DELETE /:id - Delete server (enqueue DELETE job)
+   * Only server creator and Discord owner can delete servers
    */
   fastify.delete<{ Params: ServerParams }>("/:id", { preHandler: authorizeServer }, async (request, reply) => {
     try {
       const { id } = request.params;
+      const userId = request.userId;
 
-      // Verify server exists
+      // Verify server exists (already checked by middleware, but re-fetch with org)
       const server = await prisma.server.findUnique({
-        where: { id }
+        where: { id },
+        include: {
+          org: true
+        }
       });
 
       if (!server) {
         return reply.status(404).send({
           error: "Not Found",
           message: "Server not found"
+        });
+      }
+
+      // Get user's membership to check if they're the Discord owner
+      const membership = await prisma.membership.findUnique({
+        where: {
+          userId_orgId: {
+            userId: userId!,
+            orgId: server.orgId
+          }
+        },
+        include: {
+          user: true
+        }
+      });
+
+      // Check if user is server creator or Discord owner
+      const isServerCreator = server.createdBy === userId;
+      const isDiscordOwner = membership?.user.discordId === server.org.discordOwnerDiscordId;
+
+      if (!isServerCreator && !isDiscordOwner) {
+        return reply.status(403).send({
+          error: "Forbidden",
+          message: "Only the server creator or Discord server owner can delete this server"
         });
       }
 

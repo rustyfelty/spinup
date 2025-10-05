@@ -25,7 +25,7 @@ import {
   Cpu,
   Zap,
 } from 'lucide-react';
-import { serversApi, authApi } from '../lib/api';
+import { serversApi, authApi, api } from '../lib/api';
 import type { Server, ServerStatus } from '@spinup/shared';
 import { GAMES, type GameImage } from '@spinup/shared';
 import CreateServerWizard from '../components/CreateServerWizard';
@@ -38,7 +38,7 @@ import ThemeToggle from '../components/ThemeToggle';
 const statusColors: Record<ServerStatus, string> = {
   RUNNING: 'text-green-500 bg-green-50 border-green-200',
   STOPPED: 'text-gray-500 bg-gray-50 border-gray-200',
-  CREATING: 'text-game-purple-500 bg-game-purple-50 border-game-purple-200',
+  CREATING: 'text-game-primary-500 bg-game-primary-50 border-game-primary-200',
   ERROR: 'text-game-red-600 bg-game-red-100 border-game-red-300',
   DELETING: 'text-orange-500 bg-orange-50 border-orange-200',
 };
@@ -75,16 +75,8 @@ const gameIcons: Record<string, string> = {
   'custom': '🔧',
 };
 
-// Get server IP from environment
-const getServerIP = () => {
-  const webOrigin = import.meta.env.VITE_WEB_ORIGIN || window.location.origin;
-  try {
-    const url = new URL(webOrigin);
-    return url.hostname;
-  } catch {
-    return 'localhost';
-  }
-};
+// Server IP state (fetched from API)
+let cachedServerIP: string | null = null;
 
 type FilterStatus = 'all' | ServerStatus;
 
@@ -100,8 +92,39 @@ export default function Dashboard() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [serverIP, setServerIP] = useState<string>('localhost');
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Fetch server IP on mount
+  useEffect(() => {
+    const fetchServerIP = async () => {
+      // Use cached IP if available
+      if (cachedServerIP) {
+        setServerIP(cachedServerIP);
+        return;
+      }
+
+      try {
+        const response = await api.get('/api/system/ip');
+        const ip = response.data.ip;
+        cachedServerIP = ip;
+        setServerIP(ip);
+      } catch (error) {
+        console.error('Failed to fetch server IP:', error);
+        // Fallback to hostname
+        const webOrigin = import.meta.env.VITE_WEB_ORIGIN || window.location.origin;
+        try {
+          const url = new URL(webOrigin);
+          setServerIP(url.hostname);
+        } catch {
+          setServerIP('localhost');
+        }
+      }
+    };
+
+    fetchServerIP();
+  }, []);
 
   // Fetch current user and organization
   const { data: authData, isLoading: authLoading, error: authError } = useQuery({
@@ -119,13 +142,22 @@ export default function Dashboard() {
     queryKey: ['servers', authData?.org?.id],
     queryFn: () => serversApi.list(authData!.org.id),
     enabled: !!authData?.org?.id,
+    refetchInterval: 2000, // Poll every 2 seconds for real-time status updates
   });
+
+  // Track which server is being started/stopped
+  const [startingServerId, setStartingServerId] = useState<string | null>(null);
+  const [stoppingServerId, setStoppingServerId] = useState<string | null>(null);
 
   // Start server mutation
   const startServerMutation = useMutation({
     mutationFn: serversApi.start,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
+      // Don't clear startingServerId here - let it clear when status changes
+    },
+    onError: () => {
+      setStartingServerId(null);
     },
   });
 
@@ -134,8 +166,28 @@ export default function Dashboard() {
     mutationFn: serversApi.stop,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['servers'] });
+      // Don't clear stoppingServerId here - let it clear when status changes
+    },
+    onError: () => {
+      setStoppingServerId(null);
     },
   });
+
+  // Clear starting/stopping state when server status changes
+  useEffect(() => {
+    if (startingServerId) {
+      const server = servers.find(s => s.id === startingServerId);
+      if (server && (server.status === 'RUNNING' || server.status === 'CREATING')) {
+        setStartingServerId(null);
+      }
+    }
+    if (stoppingServerId) {
+      const server = servers.find(s => s.id === stoppingServerId);
+      if (server && server.status === 'STOPPED') {
+        setStoppingServerId(null);
+      }
+    }
+  }, [servers, startingServerId, stoppingServerId]);
 
   // Logout mutation
   const logoutMutation = useMutation({
@@ -177,11 +229,13 @@ export default function Dashboard() {
 
   const handleStartServer = (e: React.MouseEvent, serverId: string) => {
     e.stopPropagation();
+    setStartingServerId(serverId);
     startServerMutation.mutate(serverId);
   };
 
   const handleStopServer = (e: React.MouseEvent, serverId: string) => {
     e.stopPropagation();
+    setStoppingServerId(serverId);
     stopServerMutation.mutate(serverId);
   };
 
@@ -225,12 +279,12 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <div className="pixel-corners-sm dark:bg-game-purple-800 bg-game-purple-500 shadow-game-sm">
-                <div className="pixel-corners-sm-content bg-gradient-to-br from-game-purple-600 to-game-purple-700 p-2">
+              <div className="pixel-corners-sm dark:bg-game-primary-800 bg-game-primary-500 shadow-game-sm">
+                <div className="pixel-corners-sm-content bg-gradient-to-br from-game-primary-600 to-game-primary-700 p-2">
                   <Gamepad2 className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <h1 className="text-xl font-pixel bg-gradient-to-r from-game-purple-600 to-game-purple-700 bg-clip-text text-transparent dark:from-game-purple-400 dark:to-game-purple-500">
+              <h1 className="hidden sm:block text-xl font-pixel bg-gradient-to-r from-game-primary-600 to-game-primary-700 bg-clip-text text-transparent dark:from-game-primary-400 dark:to-game-primary-500">
                 SpinUp
               </h1>
             </div>
@@ -239,23 +293,22 @@ export default function Dashboard() {
               <SystemHealthBar onClick={() => setShowHealthModal(true)} />
               <button
                 onClick={() => setShowCommandPalette(true)}
-                className="hidden md:flex pixel-corners-sm dark:bg-gray-700 bg-gray-300 transition-all duration-150 hover:shadow-game-sm active:translate-y-1 active:shadow-none"
+                className="hidden md:flex pixel-corners-sm dark:bg-gray-700 bg-gray-300 transition-all duration-150 hover:shadow-game-sm active:translate-y-1 active:shadow-none h-[39px]"
                 title="Command Palette (⌘K)"
               >
                 <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white dark:hover:bg-gray-700 hover:bg-gray-50 p-2 transition-colors">
-                  <Terminal className="w-5 h-5 dark:text-gray-300 text-gray-600" />
+                  <Terminal className="w-4 h-4 dark:text-gray-300 text-gray-600" />
                 </div>
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="pixel-corners-sm dark:bg-game-purple-600 bg-game-purple-500 shadow-game-sm hover:shadow-game transition-all duration-200 hover:scale-[1.02] active:translate-y-1 active:shadow-none overflow-hidden"
+                className="pixel-corners-sm dark:bg-game-primary-600 bg-game-primary-500 shadow-game-sm hover:shadow-game transition-all duration-200 hover:scale-[1.02] active:translate-y-1 active:shadow-none overflow-hidden h-[39px]"
               >
-                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white flex items-center space-x-2 px-3 md:px-4 py-2 border-l-4 dark:border-game-purple-500 border-game-purple-600 transition-all duration-300 dark:hover:bg-game-purple-600 hover:bg-game-purple-500 relative group">
-                  <div className="absolute inset-0 dark:bg-game-purple-600 bg-game-purple-500 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></div>
-                  <Plus className="w-4 h-4 dark:text-game-purple-400 text-game-purple-600 transition-colors group-hover:text-white relative z-10" />
-                  <span className="dark:text-game-purple-400 text-game-purple-700 font-bold text-sm md:text-base transition-colors group-hover:text-white relative z-10">
-                    <span className="hidden sm:inline">Create Server</span>
-                    <span className="sm:hidden">Create</span>
+                <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white flex items-center p-2 border-l-4 dark:border-game-primary-500 border-game-primary-600 transition-all duration-300 dark:hover:bg-game-primary-600 hover:bg-game-primary-500 relative group">
+                  <div className="absolute inset-0 dark:bg-game-primary-600 bg-game-primary-500 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></div>
+                  <Plus className="w-4 h-4 dark:text-game-primary-400 text-game-primary-600 transition-colors group-hover:text-white relative z-10" />
+                  <span className="hidden sm:inline dark:text-game-primary-400 text-game-primary-700 font-bold text-[10px] transition-colors group-hover:text-white relative z-10 ml-1.5">
+                    Create Server
                   </span>
                 </div>
               </button>
@@ -264,20 +317,20 @@ export default function Dashboard() {
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="pixel-corners-sm dark:bg-gray-700 bg-gray-300 transition-all duration-150 hover:shadow-game-sm active:translate-y-1 active:shadow-none"
-                ><div className="pixel-corners-sm-content dark:bg-gray-800 bg-white dark:hover:bg-gray-700 hover:bg-gray-50 flex items-center space-x-2 p-2 transition-colors">
+                  className="pixel-corners-sm dark:bg-gray-700 bg-gray-300 transition-all duration-150 hover:shadow-game-sm active:translate-y-1 active:shadow-none h-[39px]"
+                ><div className="pixel-corners-sm-content dark:bg-gray-800 bg-white dark:hover:bg-gray-700 hover:bg-gray-50 flex items-center space-x-1.5 p-2 transition-colors">
                   {authData?.user?.avatarUrl ? (
                     <img
                       src={authData.user.avatarUrl}
                       alt={authData.user.displayName || 'User'}
-                      className="w-8 h-8 rounded-full"
+                      className="w-5 h-5 rounded-full"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-gradient-to-br from-game-green-500 to-game-green-700 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
+                    <div className="w-5 h-5 bg-gradient-to-br from-game-green-500 to-game-green-700 rounded-full flex items-center justify-center">
+                      <User className="w-3 h-3 text-white" />
                     </div>
                   )}
-                  <ChevronDown className="w-4 h-4 dark:text-gray-300 text-gray-600" />
+                  <ChevronDown className="w-3 h-3 dark:text-gray-300 text-gray-600" />
                 </div>
                 </button>
 
@@ -321,16 +374,19 @@ export default function Dashboard() {
                           <span className="text-sm dark:text-gray-300 text-gray-700 font-bold">Theme</span>
                           <ThemeToggle />
                         </div>
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            navigate('/settings');
-                          }}
-                          className="w-full flex items-center space-x-3 px-4 py-2 text-sm dark:text-gray-300 text-gray-700 dark:hover:bg-gray-700 hover:bg-gray-50 transition-colors font-bold"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span>Settings</span>
-                        </button>
+                        {/* Only show Settings for OWNER, ADMIN, or Discord server owner */}
+                        {(authData?.role === 'OWNER' || authData?.role === 'ADMIN' || authData?.isDiscordOwner) && (
+                          <button
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              navigate('/settings');
+                            }}
+                            className="w-full flex items-center space-x-3 px-4 py-2 text-sm dark:text-gray-300 text-gray-700 dark:hover:bg-gray-700 hover:bg-gray-50 transition-colors font-bold"
+                          >
+                            <Settings className="w-4 h-4" />
+                            <span>Settings</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
@@ -391,7 +447,7 @@ export default function Dashboard() {
                       {authData.org.discordGuildName || authData.org.name}
                     </h2>
                     {authData.org.discordGuildId && (
-                      <span className="text-xs px-2 py-0.5 rounded dark:bg-game-purple-900/30 bg-game-purple-100 dark:text-game-purple-400 text-game-purple-700 font-medium">
+                      <span className="text-xs px-2 py-0.5 rounded dark:bg-game-primary-900/30 bg-game-primary-100 dark:text-game-primary-400 text-game-primary-700 font-medium">
                         Discord
                       </span>
                     )}
@@ -448,15 +504,15 @@ export default function Dashboard() {
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
-                  className={`pixel-corners-sm transition-all ${
+                  className={`pixel-corners-sm transition-all h-[39px] ${
                     filterStatus === status
-                      ? 'dark:bg-game-purple-600 bg-game-purple-700 shadow-game-sm'
+                      ? 'dark:bg-game-primary-600 bg-game-primary-700 shadow-game-sm'
                       : 'dark:bg-gray-600 bg-gray-300 hover:bg-gray-200 dark:hover:bg-gray-500'
                   }`}
                 >
-                  <div className={`pixel-corners-sm-content px-4 py-2 font-bold ${
+                  <div className={`pixel-corners-sm-content px-2.5 p-2 font-bold text-[10px] leading-none flex items-center justify-center ${
                     filterStatus === status
-                      ? 'bg-game-purple-600 dark:bg-game-purple-500 text-white'
+                      ? 'bg-game-primary-600 dark:bg-game-primary-500 text-white'
                       : 'dark:bg-gray-700 bg-gray-100 dark:text-gray-300 text-gray-600'
                   }`}>
                     {status === 'all' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase()}
@@ -519,10 +575,10 @@ export default function Dashboard() {
             {!searchTerm && filterStatus === 'all' && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="pixel-corners-sm dark:bg-game-purple-800 bg-game-purple-700 shadow-game-sm hover:shadow-game transition-all duration-200 hover:scale-105"
+                className="pixel-corners-sm dark:bg-game-primary-800 bg-game-primary-700 shadow-game-sm hover:shadow-game transition-all duration-200 hover:scale-105"
               >
-                <div className="pixel-corners-sm-content bg-gradient-to-r from-game-purple-600 to-game-purple-700 dark:from-game-purple-500 dark:to-game-purple-600 inline-flex items-center space-x-2 px-6 py-3 text-white font-bold">
-                  <Plus className="w-5 h-5" />
+                <div className="pixel-corners-sm-content bg-gradient-to-r from-game-primary-600 to-game-primary-700 dark:from-game-primary-500 dark:to-game-primary-600 inline-flex items-center space-x-2 px-6 py-2 text-white font-bold text-sm">
+                  <Plus className="w-4 h-4" />
                   <span>Create Your First Server</span>
                 </div>
               </button>
@@ -538,11 +594,12 @@ export default function Dashboard() {
               <ServerCard
                 key={server.id}
                 server={server}
+                serverIP={serverIP}
                 onClick={() => handleServerClick(server.id)}
                 onStart={(e) => handleStartServer(e, server.id)}
                 onStop={(e) => handleStopServer(e, server.id)}
-                isStarting={startServerMutation.isPending}
-                isStopping={stopServerMutation.isPending}
+                isStarting={startingServerId === server.id}
+                isStopping={stoppingServerId === server.id}
               />
             ))}
           </div>
@@ -590,6 +647,7 @@ export default function Dashboard() {
 // Server Card Component
 interface ServerCardProps {
   server: Server;
+  serverIP: string;
   onClick: () => void;
   onStart: (e: React.MouseEvent) => void;
   onStop: (e: React.MouseEvent) => void;
@@ -597,23 +655,41 @@ interface ServerCardProps {
   isStopping: boolean;
 }
 
-function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }: ServerCardProps) {
+function ServerCard({ server, serverIP, onClick, onStart, onStop, isStarting, isStopping }: ServerCardProps) {
+  const [dots, setDots] = useState('.');
   const game = GAMES.find((g: GameImage) => g.key === server.gameKey);
   const gameName = game?.name || server.gameKey;
   const primaryPort = server.ports[0]?.host || '-';
-  const serverIP = getServerIP();
+
+  // Animate dots when starting
+  useEffect(() => {
+    if (!isStarting) {
+      setDots('.');
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setDots((prev) => {
+        if (prev === '...') return '.';
+        if (prev === '..') return '...';
+        return '..';
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isStarting]);
 
   // Border color based on server status
   const getBorderColor = () => {
     switch (server.status) {
       case 'RUNNING':
-        return 'dark:bg-game-purple-600 bg-game-purple-500';
+        return 'dark:bg-game-primary-600 bg-game-primary-500';
       case 'STOPPED':
         return 'dark:bg-gray-600 bg-gray-400';
       case 'ERROR':
         return 'dark:bg-gray-600 bg-gray-400';
       case 'CREATING':
-        return 'dark:bg-game-purple-600 bg-game-purple-500';
+        return 'dark:bg-game-primary-600 bg-game-primary-500';
       case 'DELETING':
         return 'dark:bg-gray-600 bg-gray-400';
       default:
@@ -628,8 +704,8 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
         return {
           icon: <Wifi className="w-3.5 h-3.5" />,
           text: 'ONLINE',
-          colors: 'dark:bg-game-purple-700 bg-game-purple-600',
-          contentColors: 'dark:bg-game-purple-600 bg-game-purple-500 text-white',
+          colors: 'dark:bg-game-primary-700 bg-game-primary-600',
+          contentColors: 'dark:bg-game-primary-600 bg-game-primary-500 text-white',
         };
       case 'STOPPED':
         return {
@@ -642,8 +718,8 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
         return {
           icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
           text: 'CREATING',
-          colors: 'dark:bg-game-purple-600 bg-game-purple-500',
-          contentColors: 'dark:bg-game-purple-900/30 bg-game-purple-100 dark:text-game-purple-300 text-game-purple-700',
+          colors: 'dark:bg-game-primary-600 bg-game-primary-500',
+          contentColors: 'dark:bg-game-primary-900/30 bg-game-primary-100 dark:text-game-primary-300 text-game-primary-700',
         };
       case 'ERROR':
         return {
@@ -671,19 +747,19 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
     >
       <div className="pixel-corners-content dark:bg-gray-800 bg-white overflow-hidden">
         {/* Header Section */}
-        <div className="p-5 pb-3">
+        <div className="p-5 pb-0">
           <div className="flex items-start justify-between mb-4">
             {/* Left: Icon and Name */}
             <div className="flex items-start space-x-3 flex-1 min-w-0">
               {/* Game Icon */}
               <div className={`pixel-corners-sm shadow-game-sm flex-shrink-0 ${
                 server.status === 'RUNNING' || server.status === 'CREATING'
-                  ? 'dark:bg-game-purple-600 bg-game-purple-500'
+                  ? 'dark:bg-game-primary-600 bg-game-primary-500'
                   : 'dark:bg-gray-600 bg-gray-300'
               }`}>
                 <div className={`pixel-corners-sm-content p-2 ${
                   server.status === 'RUNNING' || server.status === 'CREATING'
-                    ? 'dark:bg-game-purple-700 bg-game-purple-400'
+                    ? 'dark:bg-game-primary-700 bg-game-primary-400'
                     : 'dark:bg-gray-700 bg-gray-100'
                 }`}>
                   <div className="text-2xl leading-none">{gameIcons[server.gameKey] || '🎮'}</div>
@@ -734,11 +810,19 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
           {/* Resource Indicators */}
           <div className="grid grid-cols-2 gap-2 text-xs mb-3">
             {/* Memory Usage */}
-            <div className="pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-400">
+            <div className={`pixel-corners-xs ${
+              server.status === 'RUNNING' || server.status === 'CREATING'
+                ? 'dark:bg-game-primary-700 bg-game-primary-400'
+                : 'dark:bg-gray-600 bg-gray-300'
+            }`}>
               <div className="pixel-corners-xs-content dark:bg-gray-800 bg-white p-2">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center space-x-1">
-                    <MemoryStick className="w-3 h-3 dark:text-game-purple-400 text-game-purple-600" />
+                    <MemoryStick className={`w-3 h-3 ${
+                      server.status === 'RUNNING' || server.status === 'CREATING'
+                        ? 'dark:text-game-primary-400 text-game-primary-600'
+                        : 'dark:text-gray-400 text-gray-500'
+                    }`} />
                     <span className="dark:text-gray-400 text-gray-600 font-medium">RAM</span>
                   </div>
                   <span className="dark:text-white text-gray-900 font-bold">
@@ -747,7 +831,7 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
                 </div>
                 <div className="w-full dark:bg-gray-700 bg-gray-200 h-1.5 rounded-sm overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-game-purple-500 to-game-purple-600 transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-game-primary-500 to-game-primary-600 transition-all duration-300"
                     style={{ width: server.status === 'RUNNING' ? '60%' : '0%' }}
                   />
                 </div>
@@ -755,11 +839,19 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
             </div>
 
             {/* CPU Usage */}
-            <div className="pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-400">
+            <div className={`pixel-corners-xs ${
+              server.status === 'RUNNING' || server.status === 'CREATING'
+                ? 'dark:bg-game-primary-700 bg-game-primary-400'
+                : 'dark:bg-gray-600 bg-gray-300'
+            }`}>
               <div className="pixel-corners-xs-content dark:bg-gray-800 bg-white p-2">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center space-x-1">
-                    <Cpu className="w-3 h-3 dark:text-game-purple-400 text-game-purple-600" />
+                    <Cpu className={`w-3 h-3 ${
+                      server.status === 'RUNNING' || server.status === 'CREATING'
+                        ? 'dark:text-game-primary-400 text-game-primary-600'
+                        : 'dark:text-gray-400 text-gray-500'
+                    }`} />
                     <span className="dark:text-gray-400 text-gray-600 font-medium">CPU</span>
                   </div>
                   <span className="dark:text-white text-gray-900 font-bold">
@@ -768,7 +860,7 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
                 </div>
                 <div className="w-full dark:bg-gray-700 bg-gray-200 h-1.5 rounded-sm overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-game-purple-500 to-game-purple-600 transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-game-primary-500 to-game-primary-600 transition-all duration-300"
                     style={{ width: server.status === 'RUNNING' ? '45%' : '0%' }}
                   />
                 </div>
@@ -839,19 +931,23 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
                   <a
                     href={`steam://connect/${serverIP}:${primaryPort}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="flex-1 pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-600 shadow-game-sm hover:shadow-game transition-all hover:scale-105"
+                    className="flex-1 pixel-corners-xs dark:bg-game-primary-700 bg-game-primary-600 shadow-game-sm hover:shadow-game transition-all hover:scale-105"
                   >
-                    <div className="pixel-corners-xs-content dark:bg-game-purple-600 bg-game-purple-500 dark:hover:bg-game-purple-500 hover:bg-game-purple-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
-                      <ExternalLink className="w-3.5 h-3.5 text-white" />
+                    <div className="pixel-corners-xs-content dark:bg-game-primary-600 bg-game-primary-500 dark:hover:bg-game-primary-500 hover:bg-game-primary-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
+                      <img
+                        src="https://i.imgur.com/JNxCAv7.png"
+                        alt="Steam"
+                        className="w-4 h-4"
+                      />
                       <span className="text-white text-xs font-bold">CONNECT</span>
                     </div>
                   </a>
                   <button
                     onClick={onStop}
                     disabled={isStopping}
-                    className="flex-1 pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-600 shadow-game-sm hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
+                    className="flex-1 pixel-corners-xs dark:bg-game-primary-700 bg-game-primary-600 shadow-game-sm hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
                   >
-                    <div className="pixel-corners-xs-content dark:bg-game-purple-600 bg-game-purple-500 dark:hover:bg-game-purple-500 hover:bg-game-purple-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
+                    <div className="pixel-corners-xs-content dark:bg-game-primary-600 bg-game-primary-500 dark:hover:bg-game-primary-500 hover:bg-game-primary-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
                       {isStopping ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
@@ -870,9 +966,9 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
                 <button
                   onClick={onStop}
                   disabled={isStopping}
-                  className="w-full pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-600 shadow-game-sm hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
+                  className="w-full pixel-corners-xs dark:bg-game-primary-700 bg-game-primary-600 shadow-game-sm hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
                 >
-                  <div className="pixel-corners-xs-content dark:bg-game-purple-600 bg-game-purple-500 dark:hover:bg-game-purple-500 hover:bg-game-purple-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
+                  <div className="pixel-corners-xs-content dark:bg-game-primary-600 bg-game-primary-500 dark:hover:bg-game-primary-500 hover:bg-game-primary-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
                     {isStopping ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
@@ -895,7 +991,7 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
         {server.status === 'STOPPED' && (
           <div className="px-5 pb-4">
             <div className="pixel-corners-xs dark:bg-gray-700 bg-gray-200 mb-3">
-              <div className="pixel-corners-xs-content dark:bg-gray-900/50 bg-gray-50 p-3 flex items-center justify-center" style={{ minHeight: '72px' }}>
+              <div className="pixel-corners-xs-content dark:bg-gray-900/50 bg-gray-50 p-3 flex items-center justify-center" style={{ minHeight: '80px' }}>
                 <div className="flex items-center space-x-2 text-xs">
                   <WifiOff className="w-3 h-3 dark:text-gray-600 text-gray-400" />
                   <span className="dark:text-gray-400 text-gray-600 font-medium">Server is offline</span>
@@ -905,13 +1001,13 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
             <button
               onClick={onStart}
               disabled={isStarting}
-              className="w-full pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-600 shadow-game-sm hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
+              className="w-full pixel-corners-xs dark:bg-game-primary-700 bg-game-primary-600 shadow-game-sm hover:shadow-game disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105"
             >
-              <div className="pixel-corners-xs-content dark:bg-game-purple-600 bg-game-purple-500 dark:hover:bg-game-purple-500 hover:bg-game-purple-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
+              <div className="pixel-corners-xs-content dark:bg-game-primary-600 bg-game-primary-500 dark:hover:bg-game-primary-500 hover:bg-game-primary-400 transition-colors px-3 py-2.5 flex items-center justify-center space-x-1.5">
                 {isStarting ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                    <span className="text-white text-xs font-bold">STARTING...</span>
+                    <span className="text-white text-xs font-bold">STARTING{dots}</span>
                   </>
                 ) : (
                   <>
@@ -927,19 +1023,19 @@ function ServerCard({ server, onClick, onStart, onStop, isStarting, isStopping }
         {/* Creating State */}
         {server.status === 'CREATING' && (
           <div className="px-5 pb-4">
-            <div className="pixel-corners-xs dark:bg-game-purple-700 bg-game-purple-400">
-              <div className="pixel-corners-xs-content dark:bg-game-purple-900/30 bg-game-purple-50 py-6 px-4">
-                <Loader2 className="w-10 h-10 dark:text-game-purple-400 text-game-purple-600 mx-auto mb-3 animate-spin" />
-                <p className="text-sm dark:text-game-purple-300 text-game-purple-700 font-bold text-center mb-3">
+            <div className="pixel-corners-xs dark:bg-game-primary-700 bg-game-primary-400">
+              <div className="pixel-corners-xs-content dark:bg-game-primary-900/30 bg-game-primary-50 py-6 px-4">
+                <Loader2 className="w-10 h-10 dark:text-game-primary-400 text-game-primary-600 mx-auto mb-3 animate-spin" />
+                <p className="text-sm dark:text-game-primary-300 text-game-primary-700 font-bold text-center mb-3">
                   Setting up your server...
                 </p>
-                <div className="w-full dark:bg-game-purple-800 bg-game-purple-200 h-2 rounded-sm overflow-hidden">
+                <div className="w-full dark:bg-game-primary-800 bg-game-primary-200 h-2 rounded-sm overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-game-purple-400 to-game-purple-600 h-full animate-pulse"
+                    className="bg-gradient-to-r from-game-primary-400 to-game-primary-600 h-full animate-pulse"
                     style={{ width: '60%' }}
                   />
                 </div>
-                <p className="text-xs dark:text-game-purple-400 text-game-purple-600 text-center mt-2">
+                <p className="text-xs dark:text-game-primary-400 text-game-primary-600 text-center mt-2">
                   This usually takes 1-2 minutes
                 </p>
               </div>

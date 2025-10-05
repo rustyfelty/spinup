@@ -27,7 +27,7 @@ api.interceptors.response.use(
 export const authApi = {
   async getMe() {
     const { data } = await api.get('/api/sso/me')
-    return data as { user: User; org: Organization; role: string }
+    return data as { user: User; org: Organization; role: string; isDiscordOwner: boolean }
   },
 
   async logout() {

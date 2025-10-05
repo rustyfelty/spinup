@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { api, authApi } from '../lib/api'
 import ThemeToggle from '../components/ThemeToggle'
 import { useTheme } from '../contexts/ThemeContext'
 
@@ -13,6 +14,20 @@ export default function Settings() {
   const [success, setSuccess] = useState('')
   const [webDomain, setWebDomain] = useState('')
   const [apiDomain, setApiDomain] = useState('')
+
+  // Check user permissions
+  const { data: authData } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: authApi.getMe,
+    retry: false,
+  })
+
+  // Redirect if user doesn't have admin access
+  useEffect(() => {
+    if (authData && authData.role !== 'OWNER' && authData.role !== 'ADMIN' && !authData.isDiscordOwner) {
+      navigate('/')
+    }
+  }, [authData, navigate])
 
   // Reset confirmation dialog state
   const [showResetDialog, setShowResetDialog] = useState(false)
@@ -29,8 +44,9 @@ export default function Settings() {
   const loadSettings = async () => {
     try {
       const { data } = await api.get('/api/settings')
-      setWebDomain(data.webDomain || '')
-      setApiDomain(data.apiDomain || '')
+      // Strip https:// prefix for display
+      setWebDomain((data.webDomain || '').replace(/^https?:\/\//, ''))
+      setApiDomain((data.apiDomain || '').replace(/^https?:\/\//, ''))
     } catch (err: any) {
       setError('Failed to load settings')
       console.error(err)
@@ -85,9 +101,13 @@ export default function Settings() {
     setSaving(true)
 
     try {
+      // Add https:// prefix before saving
+      const fullWebDomain = webDomain.startsWith('http') ? webDomain : `https://${webDomain}`
+      const fullApiDomain = apiDomain.startsWith('http') ? apiDomain : `https://${apiDomain}`
+
       await api.patch('/api/settings', {
-        webDomain,
-        apiDomain
+        webDomain: fullWebDomain,
+        apiDomain: fullApiDomain
       })
 
       setSuccess('Settings saved successfully! Reload the page for changes to take effect.')
@@ -109,7 +129,7 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 from-gray-50 to-gray-100">
       {/* Header */}
-      <header className="dark:bg-gray-800/95 bg-white dark:border-gray-700 border-b-2 border-gray-300 shadow-game-sm">
+      <header className="dark:bg-gray-800/80 bg-white/90 backdrop-blur-md dark:border-gray-700 border-b-2 border-gray-300 sticky top-0 z-40 shadow-game-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
@@ -129,7 +149,7 @@ export default function Settings() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Theme Colors Section */}
         <div className="pixel-corners-sm dark:border-gray-700 border-gray-300 mb-6">
-          <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white shadow-game overflow-hidden">
+          <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm shadow-game overflow-hidden">
           <div className="p-6 border-b-2 dark:border-gray-700 border-gray-300">
             <h2 className="text-lg font-pixel dark:text-white text-gray-900">Theme Colors</h2>
             <p className="dark:text-gray-400 text-gray-600 text-sm mt-1">
@@ -143,37 +163,38 @@ export default function Settings() {
               <label className="block text-sm font-bold dark:text-gray-300 text-gray-700 mb-2">
                 Primary Color
               </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => updatePrimaryColor(e.target.value)}
-                  className="w-20 h-20 rounded-lg border-2 dark:border-gray-600 border-gray-300 cursor-pointer"
-                />
-                <div className="flex-1">
+              <div className="pixel-corners-sm dark:border-gray-600 border-gray-300">
+                <div className="pixel-corners-sm-content flex items-stretch overflow-hidden dark:bg-gray-800 bg-white">
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => updatePrimaryColor(e.target.value)}
+                    className="w-16 cursor-pointer dark:bg-gray-700 bg-gray-100 border-r-2 dark:border-gray-600 border-gray-300"
+                    style={{ padding: '0', height: '48px' }}
+                  />
                   <input
                     type="text"
                     value={primaryColor}
                     onChange={(e) => updatePrimaryColor(e.target.value)}
-                    placeholder="#9146ff"
-                    className="w-full px-4 py-3 dark:bg-gray-700 bg-white border-2 dark:border-gray-600 border-gray-300 rounded dark:text-white text-gray-900 dark:placeholder-gray-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-game-purple-500 font-mono text-lg"
+                    placeholder="#5865F2"
+                    className="flex-1 px-4 py-3 dark:bg-gray-700 bg-white dark:text-white text-gray-900 dark:placeholder-gray-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-game-primary-500 focus:ring-inset font-mono"
                   />
-                  <p className="dark:text-gray-400 text-gray-600 text-sm mt-2">
-                    This color is used for buttons, borders, icons, and all interactive elements across the site
-                  </p>
                 </div>
               </div>
+              <p className="dark:text-gray-400 text-gray-600 text-sm mt-2">
+                This color is used for buttons, borders, icons, and all interactive elements across the site
+              </p>
             </div>
 
             {/* Reset Button */}
             <div className="pt-4">
-              <div className="pixel-corners-sm dark:border-gray-600 border-gray-400 w-full sm:w-auto inline-block">
+              <div className="pixel-corners-sm dark:bg-gray-700 bg-gray-300 shadow-game-sm hover:shadow-game transition-all w-full sm:w-auto inline-block">
                 <button
                   type="button"
                   onClick={resetColor}
-                  className="pixel-corners-sm-content px-4 sm:px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 font-bold transition shadow-game-sm text-sm sm:text-base whitespace-nowrap"
+                  className="pixel-corners-sm-content px-4 sm:px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 font-bold transition text-sm sm:text-base whitespace-nowrap"
                 >
-                  Reset to Default Purple
+                  Reset to Discord Blurple
                 </button>
               </div>
             </div>
@@ -184,19 +205,19 @@ export default function Settings() {
             <h3 className="text-sm font-bold dark:text-white text-gray-900 mb-3">How it works:</h3>
             <ul className="text-sm dark:text-gray-400 text-gray-700 space-y-2">
               <li className="flex items-start gap-2">
-                <span className="dark:text-game-purple-400 text-game-purple-600 mt-1">•</span>
+                <span className="dark:text-game-primary-400 text-game-primary-600 mt-1">•</span>
                 <span>Choose any color and all buttons, borders, and interactive elements will update instantly</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="dark:text-game-purple-400 text-game-purple-600 mt-1">•</span>
+                <span className="dark:text-game-primary-400 text-game-primary-600 mt-1">•</span>
                 <span>Use the color picker or enter a hex code (e.g., #9146ff for Twitch purple)</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="dark:text-game-purple-400 text-game-purple-600 mt-1">•</span>
+                <span className="dark:text-game-primary-400 text-game-primary-600 mt-1">•</span>
                 <span>Your custom color is saved in your browser and persists across sessions</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="dark:text-game-purple-400 text-game-purple-600 mt-1">•</span>
+                <span className="dark:text-game-primary-400 text-game-primary-600 mt-1">•</span>
                 <span>Try bright colors like cyan (#00ffff), pink (#ff00ff), or orange (#ff6600)!</span>
               </li>
             </ul>
@@ -206,7 +227,7 @@ export default function Settings() {
 
         {/* Discord Integration Section */}
         <div className="pixel-corners-sm dark:border-gray-700 border-gray-300 mb-6">
-          <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white shadow-game overflow-hidden">
+          <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm shadow-game overflow-hidden">
           <div className="p-6 border-b-2 dark:border-gray-700 border-gray-300">
             <h2 className="text-lg font-pixel dark:text-white text-gray-900">Discord Integration</h2>
             <p className="dark:text-gray-400 text-gray-600 text-sm mt-1">
@@ -221,18 +242,18 @@ export default function Settings() {
                 Configure which Discord roles have access to different features in SpinUp. The Server Owner always has full access to all features.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <div className="pixel-corners-sm border-purple-700 w-full sm:w-auto">
+                <div className="pixel-corners-sm dark:bg-game-primary-600 bg-game-primary-500 shadow-game-sm hover:shadow-game transition-all w-full sm:w-auto">
                   <button
                     onClick={() => navigate('/discord-roles')}
-                    className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base transition shadow-game-sm whitespace-nowrap"
+                    className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 dark:bg-game-primary-600 bg-game-primary-500 hover:bg-game-primary-700 dark:hover:bg-game-primary-500 text-white text-sm sm:text-base font-bold transition whitespace-nowrap"
                   >
                     Manage Roles
                   </button>
                 </div>
-                <div className="pixel-corners-sm border-game-red-800 w-full sm:w-auto">
+                <div className="pixel-corners-sm bg-game-red-700 shadow-game-sm hover:shadow-game transition-all w-full sm:w-auto">
                   <button
                     onClick={() => setShowResetDialog(true)}
-                    className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white text-sm sm:text-base transition shadow-game-sm whitespace-nowrap"
+                    className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-game-red-700 hover:bg-game-red-800 text-white text-sm sm:text-base font-bold transition whitespace-nowrap"
                   >
                     Change Server
                   </button>
@@ -255,7 +276,7 @@ export default function Settings() {
 
         {/* Domain Configuration Section */}
         <div className="pixel-corners-sm dark:border-gray-700 border-gray-300">
-          <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white shadow-game overflow-hidden">
+          <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white backdrop-blur-sm shadow-game overflow-hidden">
           <div className="p-6 border-b-2 dark:border-gray-700 border-gray-300">
             <h2 className="text-lg font-pixel dark:text-white text-gray-900">Domain Configuration</h2>
             <p className="dark:text-gray-400 text-gray-600 text-sm mt-1">
@@ -269,16 +290,23 @@ export default function Settings() {
               <label className="block text-sm font-bold dark:text-gray-300 text-gray-700 mb-2">
                 Web App Domain
               </label>
-              <input
-                type="url"
-                value={webDomain}
-                onChange={(e) => setWebDomain(e.target.value)}
-                placeholder="https://daboyz.live"
-                className="w-full px-4 py-2 dark:bg-gray-700 bg-white border-2 dark:border-gray-600 border-gray-300 rounded dark:text-white text-gray-900 dark:placeholder-gray-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-game-green-500"
-                required
-              />
-              <p className="dark:text-gray-400 text-gray-600 text-xs mt-1">
-                The public URL where your web app is accessible (e.g., https://daboyz.live)
+              <div className="pixel-corners-sm dark:bg-gray-600 bg-gray-400">
+                <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white/50 backdrop-blur-sm flex items-stretch overflow-hidden">
+                  <div className="flex items-center px-3 dark:bg-gray-700/50 bg-gray-200/50 border-r-2 dark:border-gray-600 border-gray-400">
+                    <span className="dark:text-gray-400 text-gray-600 text-sm font-mono font-bold">https://</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={webDomain}
+                    onChange={(e) => setWebDomain(e.target.value)}
+                    placeholder="daboyz.live"
+                    className="flex-1 px-4 py-3 bg-transparent dark:text-white text-gray-900 dark:placeholder:text-gray-500 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-game-primary-500"
+                    required
+                  />
+                </div>
+              </div>
+              <p className="dark:text-gray-400 text-gray-600 text-xs mt-2 ml-1">
+                The public URL where your web app is accessible
               </p>
             </div>
 
@@ -287,16 +315,23 @@ export default function Settings() {
               <label className="block text-sm font-bold dark:text-gray-300 text-gray-700 mb-2">
                 API Domain
               </label>
-              <input
-                type="url"
-                value={apiDomain}
-                onChange={(e) => setApiDomain(e.target.value)}
-                placeholder="https://api.daboyz.live"
-                className="w-full px-4 py-2 dark:bg-gray-700 bg-white border-2 dark:border-gray-600 border-gray-300 rounded dark:text-white text-gray-900 dark:placeholder-gray-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-game-green-500"
-                required
-              />
-              <p className="dark:text-gray-400 text-gray-600 text-xs mt-1">
-                The public URL where your API is accessible (e.g., https://api.daboyz.live)
+              <div className="pixel-corners-sm dark:bg-gray-600 bg-gray-400">
+                <div className="pixel-corners-sm-content dark:bg-gray-800/50 bg-white/50 backdrop-blur-sm flex items-stretch overflow-hidden">
+                  <div className="flex items-center px-3 dark:bg-gray-700/50 bg-gray-200/50 border-r-2 dark:border-gray-600 border-gray-400">
+                    <span className="dark:text-gray-400 text-gray-600 text-sm font-mono font-bold">https://</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={apiDomain}
+                    onChange={(e) => setApiDomain(e.target.value)}
+                    placeholder="api.daboyz.live"
+                    className="flex-1 px-4 py-3 bg-transparent dark:text-white text-gray-900 dark:placeholder:text-gray-500 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-game-primary-500"
+                    required
+                  />
+                </div>
+              </div>
+              <p className="dark:text-gray-400 text-gray-600 text-xs mt-2 ml-1">
+                The public URL where your API is accessible
               </p>
             </div>
 
@@ -320,20 +355,20 @@ export default function Settings() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <div className="pixel-corners-sm border-game-green-700 w-full sm:w-auto">
+              <div className="pixel-corners-sm bg-game-green-600 shadow-game-sm hover:shadow-game transition-all w-full sm:w-auto">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 text-white font-bold transition shadow-game-sm text-sm sm:text-base whitespace-nowrap"
+                  className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 bg-game-green-600 hover:bg-game-green-700 disabled:bg-game-green-600/50 disabled:opacity-70 text-white font-bold transition text-sm sm:text-base whitespace-nowrap"
                 >
                   {saving ? 'Saving...' : 'Save Settings'}
                 </button>
               </div>
-              <div className="pixel-corners-sm dark:border-gray-600 border-gray-400 w-full sm:w-auto">
+              <div className="pixel-corners-sm dark:bg-gray-700 bg-gray-300 shadow-game-sm hover:shadow-game transition-all w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => navigate('/')}
-                  className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 font-bold transition shadow-game-sm text-sm sm:text-base whitespace-nowrap"
+                  className="pixel-corners-sm-content w-full sm:w-auto px-4 sm:px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 dark:text-white text-gray-900 font-bold transition text-sm sm:text-base whitespace-nowrap"
                 >
                   Cancel
                 </button>
@@ -369,9 +404,9 @@ export default function Settings() {
 
       {/* Reset Confirmation Dialog */}
       {showResetDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="pixel-corners-sm dark:border-gray-700 border-gray-300 max-w-lg w-full mx-4">
-            <div className="pixel-corners-sm-content dark:bg-gray-800 bg-white shadow-game">
+            <div className="pixel-corners-sm-content dark:bg-gray-800/95 bg-white backdrop-blur-sm shadow-game">
             <div className="p-6 border-b-2 dark:border-gray-700 border-gray-300">
               <h2 className="text-lg font-pixel dark:text-white text-gray-900">⚠️ Change Discord Server</h2>
               <p className="dark:text-gray-400 text-gray-600 text-sm mt-1">
@@ -395,9 +430,9 @@ export default function Settings() {
               </div>
 
               {guildName && (
-                <div className="pixel-corners-sm dark:border-purple-700 border-purple-400">
-                  <div className="pixel-corners-sm-content dark:bg-purple-900/20 bg-purple-50 p-4">
-                    <p className="text-sm dark:text-purple-300 text-purple-700">
+                <div className="pixel-corners-sm dark:border-game-primary-700 border-game-primary-400">
+                  <div className="pixel-corners-sm-content dark:bg-game-primary-900/20 bg-game-primary-50 p-4">
+                    <p className="text-sm dark:text-game-primary-300 text-game-primary-700">
                       <strong>Current Discord Server:</strong> {guildName}
                     </p>
                   </div>
@@ -408,14 +443,16 @@ export default function Settings() {
                 <label className="block text-sm font-bold dark:text-gray-300 text-gray-700 mb-2">
                   To confirm, type: <span className="dark:text-white text-gray-900 font-mono">RESET-SYSTEM-COMPLETELY</span>
                 </label>
-                <input
-                  type="text"
-                  value={resetConfirmName}
-                  onChange={(e) => setResetConfirmName(e.target.value)}
-                  placeholder="RESET-SYSTEM-COMPLETELY"
-                  className="w-full px-4 py-2 dark:bg-gray-700 bg-white border-2 dark:border-gray-600 border-gray-300 rounded dark:text-white text-gray-900 dark:placeholder-gray-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 font-mono"
-                  autoFocus
-                />
+                <div className="pixel-corners-sm dark:border-gray-600 border-gray-300">
+                  <input
+                    type="text"
+                    value={resetConfirmName}
+                    onChange={(e) => setResetConfirmName(e.target.value)}
+                    placeholder="RESET-SYSTEM-COMPLETELY"
+                    className="pixel-corners-sm-content w-full px-4 py-3 dark:bg-gray-700 bg-white dark:text-white text-gray-900 dark:placeholder-gray-400 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset font-mono"
+                    autoFocus
+                  />
+                </div>
                 <p className="dark:text-gray-500 text-gray-600 text-xs mt-1">
                   Type the confirmation text exactly as shown above (case-sensitive)
                 </p>
@@ -431,7 +468,7 @@ export default function Settings() {
             </div>
 
             <div className="p-6 border-t-2 dark:border-gray-700 border-gray-300 flex flex-col sm:flex-row gap-3">
-              <div className="pixel-corners-sm dark:border-gray-600 border-gray-400 flex-1">
+              <div className="pixel-corners-sm dark:bg-gray-700 bg-gray-300 shadow-game-sm hover:shadow-game transition-all flex-1">
                 <button
                   onClick={() => {
                     setShowResetDialog(false)
@@ -439,16 +476,16 @@ export default function Settings() {
                     setResetError('')
                   }}
                   disabled={resetting}
-                  className="pixel-corners-sm-content w-full px-4 sm:px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 disabled:bg-gray-700/50 dark:text-white text-gray-900 font-bold transition shadow-game-sm text-sm sm:text-base whitespace-nowrap"
+                  className="pixel-corners-sm-content w-full px-4 sm:px-6 py-2 dark:bg-gray-700 bg-gray-300 dark:hover:bg-gray-600 hover:bg-gray-400 disabled:bg-gray-700/50 disabled:opacity-70 dark:text-white text-gray-900 font-bold transition text-sm sm:text-base whitespace-nowrap"
                 >
                   Cancel
                 </button>
               </div>
-              <div className="pixel-corners-sm border-game-red-800 flex-1">
+              <div className="pixel-corners-sm bg-game-red-700 shadow-game-sm hover:shadow-game transition-all flex-1">
                 <button
                   onClick={handleResetSetup}
                   disabled={resetting || !resetConfirmName.trim()}
-                  className="pixel-corners-sm-content w-full px-4 sm:px-6 py-2 bg-game-red-700 hover:bg-game-red-800 disabled:bg-game-red-700/50 disabled:cursor-not-allowed text-white font-bold transition shadow-game-sm text-sm sm:text-base"
+                  className="pixel-corners-sm-content w-full px-4 sm:px-6 py-2 bg-game-red-700 hover:bg-game-red-800 disabled:bg-game-red-700/50 disabled:opacity-70 disabled:cursor-not-allowed text-white font-bold transition text-sm sm:text-base"
                 >
                   <span className="hidden sm:inline">{resetting ? 'Resetting...' : 'Delete Everything & Change Server'}</span>
                   <span className="sm:hidden">{resetting ? 'Resetting...' : 'Confirm Reset'}</span>

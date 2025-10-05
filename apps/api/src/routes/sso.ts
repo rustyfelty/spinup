@@ -242,6 +242,10 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         return reply.code(404).send({ error: "User not found" });
       }
 
+      const membership = user.memberships[0];
+      const org = membership?.org;
+      const isDiscordOwner = org?.discordOwnerDiscordId === user.discordId;
+
       return reply.send({
         user: {
           id: user.id,
@@ -249,8 +253,9 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
           displayName: user.displayName,
           avatarUrl: user.avatarUrl
         },
-        org: user.memberships[0]?.org,
-        role: user.memberships[0]?.role
+        org,
+        role: membership?.role,
+        isDiscordOwner
       });
 
     } catch (error) {
@@ -357,6 +362,9 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
   // Discord OAuth Login (for regular user login, not setup)
   app.get("/discord/oauth/login", async (req, reply) => {
     try {
+      // Check if this is a retry (after prompt=none failed)
+      const retry = req.query.retry === 'true';
+
       // Generate CSRF state token with flow type encoded
       const state = randomBytes(32).toString('hex');
       oauthStates.set(state, {
@@ -371,7 +379,7 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
       const { url } = discordOAuth.generateAuthUrl(state, {
         redirectUri,
         includeBot: false, // Don't include bot scope for regular login
-        skipPrompt: true   // Skip auth screen for returning users
+        skipPrompt: false  // Always show auth screen to avoid loops with 2FA
       });
 
       return reply.send({ url });
@@ -386,8 +394,38 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
 
   // Unified OAuth callback handler for both login and setup flows
   app.get("/discord/login/callback", async (req, reply) => {
-    const { code, state, guild_id } = req.query as { code?: string; state?: string; guild_id?: string };
+    const { code, state, guild_id, error: oauthError } = req.query as { code?: string; state?: string; guild_id?: string; error?: string };
     const webOrigin = process.env.WEB_ORIGIN || 'http://localhost:5173';
+
+    // Handle OAuth errors (e.g., when prompt=none fails because user hasn't authorized)
+    if (oauthError && state) {
+      const stateData = oauthStates.get(state);
+      app.log.info(`OAuth error received: ${oauthError}`);
+
+      // Handle various OAuth errors that require re-authorization
+      if (stateData && (oauthError === 'consent_required' || oauthError === 'interaction_required' || oauthError === 'login_required')) {
+        // User hasn't authorized the app yet or needs to re-authenticate (2FA, etc.)
+        oauthStates.delete(state);
+        app.log.info(`${oauthError} error, retrying with full consent screen`);
+
+        // Redirect back to login endpoint with retry flag
+        const apiOrigin = process.env.API_ORIGIN || 'http://localhost:8080';
+        const retryUrl = `${apiOrigin}/api/sso/discord/oauth/login?retry=true`;
+
+        // Return HTML that auto-redirects (preserves the OAuth flow)
+        return reply.type('text/html').send(`
+          <!DOCTYPE html>
+          <html>
+          <head><meta http-equiv="refresh" content="0;url=${retryUrl}"></head>
+          <body>Redirecting to Discord authorization...</body>
+          </html>
+        `);
+      }
+
+      // For other OAuth errors, log and redirect with error
+      app.log.error(`Unhandled OAuth error: ${oauthError}`);
+      return reply.redirect(`${webOrigin}/login?error=oauth-failed&details=${oauthError}`);
+    }
 
     if (!code || !state) {
       return reply.redirect(`${webOrigin}/login?error=missing-params`);
@@ -467,7 +505,7 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         return reply.redirect(redirectUrl.toString());
 
       } else {
-        // LOGIN FLOW: Find user and create JWT session
+        // LOGIN FLOW: Find or create user and create JWT session
         let user = await prisma.user.findUnique({
           where: { discordId: discordUser.id },
           include: {
@@ -479,7 +517,95 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
           }
         });
 
-        if (!user || user.memberships.length === 0) {
+        // If user doesn't exist, create them and add to the default org
+        if (!user) {
+          const avatarUrl = discordUser.avatar
+            ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+            : null;
+
+          // Find the first org in the system (or create a default one)
+          let defaultOrg = await prisma.org.findFirst({
+            where: {
+              discordGuildId: { not: null }
+            },
+            include: {
+              settings: {
+                include: {
+                  rolePermissions: true
+                }
+              }
+            }
+          });
+
+          if (!defaultOrg) {
+            // Create a default org if none exists
+            defaultOrg = await prisma.org.create({
+              data: {
+                name: 'Default Organization'
+              }
+            });
+          }
+
+          // Determine the user's role based on Discord roles
+          let assignedRole: 'OWNER' | 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'OPERATOR'; // Default to OPERATOR
+
+          // If org has Discord integration, fetch user's roles and match permissions
+          if (defaultOrg.discordGuildId && defaultOrg.settings?.discordRolePermissions) {
+            try {
+              // Get user's guild member info to see their roles (requires bot token)
+              const botToken = process.env.DISCORD_BOT_TOKEN;
+              if (!botToken) {
+                throw new Error('Discord bot token not configured');
+              }
+              const guildMember = await discordOAuth.getGuildMember(defaultOrg.discordGuildId, discordUser.id, botToken);
+
+              // Check if user is the Discord server owner
+              if (defaultOrg.discordOwnerDiscordId === discordUser.id) {
+                assignedRole = 'OWNER';
+              } else {
+                // Find the highest permission role they have
+                const rolePermissions = defaultOrg.settings.discordRolePermissions;
+                const userHasAdminRole = guildMember.roles.some((roleId: string) =>
+                  rolePermissions.some(rp => rp.discordRoleId === roleId && rp.canManageSettings)
+                );
+
+                if (userHasAdminRole) {
+                  assignedRole = 'ADMIN';
+                }
+                // OPERATOR is already the default
+              }
+            } catch (roleError) {
+              app.log.warn(`Failed to fetch Discord roles for user ${discordUser.id}:`, roleError);
+              // Keep default OPERATOR role
+            }
+          }
+
+          // Create the user with a membership to the default org
+          user = await prisma.user.create({
+            data: {
+              discordId: discordUser.id,
+              displayName: discordUser.global_name || discordUser.username,
+              avatarUrl: avatarUrl,
+              memberships: {
+                create: {
+                  role: assignedRole,
+                  orgId: defaultOrg.id
+                }
+              }
+            },
+            include: {
+              memberships: {
+                include: {
+                  org: true
+                }
+              }
+            }
+          });
+
+          app.log.info(`Created new user ${user.id} (${discordUser.username}) with role ${assignedRole} and added to org ${defaultOrg.id}`);
+        }
+
+        if (user.memberships.length === 0) {
           return reply.redirect(`${webOrigin}/login?error=no-access`);
         }
 
@@ -532,7 +658,12 @@ export const ssoRoutes: FastifyPluginCallback = (app, _opts, done) => {
         return reply.redirect(`${webOrigin}/orgs/${org.id}/servers`);
       }
     } catch (error: any) {
-      app.log.error('Discord OAuth callback error:', error);
+      app.log.error({
+        error: error.message || error,
+        stack: error.stack,
+        response: error.response?.data,
+        status: error.response?.status
+      }, 'Discord OAuth callback error');
 
       if (isSetupFlow) {
         return reply.redirect(`${webOrigin}/setup?error=oauth-failed`);
